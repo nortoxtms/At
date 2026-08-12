@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "ONLY HORSES",
+    "slug": "only-horses",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "onlyhorses",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#17130F"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.onlyhorses",
+      "associatedDomains": ["applinks:onlyhorses.app"],
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Yakınındaki atları ve hizmetleri gösterebilmek için konumunu kullanıyoruz.",
+        "NSPhotoLibraryUsageDescription": "Atının fotoğraflarını yüklemek için galerine erişmemiz gerekiyor.",
+        "NSCameraUsageDescription": "Atının fotoğrafını çekmek için kameraya erişmemiz gerekiyor."
+      }
+    },
+    "android": {
+      "package": "app.onlyhorses",
+      "adaptiveIcon": { "backgroundColor": "#17130F" },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "onlyhorses.app" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "plugins": ["expo-router", "expo-secure-store", "expo-font"],
+    "experiments": { "typedRoutes": true }
+  }
+}

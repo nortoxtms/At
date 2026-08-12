@@ -1,0 +1,12 @@
+{
+  "name": "@only-horses/config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "exports": {
+    "./tailwind-preset": "./tailwind-preset.js"
+  },
+  "dependencies": {
+    "@only-horses/shared-types": "workspace:*"
+  }
+}

@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens — spec §20.1.
+ *
+ * Duplicated here as CSS custom properties so non-Tailwind surfaces (the
+ * timeline rule, OG image templates, embedded SVG) reach the same palette.
+ * The values are generated from packages/shared-types/src/tokens.ts; keep
+ * them in sync by editing the token file, not this one.
+ */
+:root {
+  --ink: #17130f;
+  --leather: #4a2f1d;
+  --leather-deep: #33200f;
+  --brass: #b4832f;
+  --brass-light: #d9ad5c;
+  --sand: #e4d7c2;
+  --cream: #f7f2e8;
+  --paper: #ffffff;
+
+  --success: #4a6b45;
+  --warning: #c2761e;
+  --danger: #9b2c1f;
+  --info: #3c5a6b;
+
+  --text-primary: #17130f;
+  --text-secondary: #5c5147;
+  --text-muted: #8a7d70;
+  --text-inverse: #f7f2e8;
+
+  --border: #dcd0bc;
+  --border-strong: #b9a88e;
+
+  --surface: var(--cream);
+}
+
+/* §20.1: ink ground, cream text, brass-light accent, borders at 12% white. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface: var(--ink);
+    --paper: #221c17;
+    --text-primary: var(--cream);
+    --text-secondary: #c4b8a8;
+    --text-inverse: var(--ink);
+    --brass: var(--brass-light);
+    --border: rgba(255, 255, 255, 0.12);
+    --border-strong: rgba(255, 255, 255, 0.2);
+  }
+}
+
+:root[data-theme='dark'] {
+  --surface: var(--ink);
+  --paper: #221c17;
+  --text-primary: var(--cream);
+  --text-secondary: #c4b8a8;
+  --text-inverse: var(--ink);
+  --brass: var(--brass-light);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
+}
+
+body {
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+/* §20.2: tabular figures for prices, heights and dates so columns align. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * §20.4 — the horse timeline.
+ *
+ * "The one visually distinctive component in the product and the physical
+ * expression of the core insight." A hairline brass rule with small diamond
+ * nodes; everything around it stays quiet.
+ */
+.timeline {
+  position: relative;
+  padding-inline-start: 2rem;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  inset-block: 0.5rem;
+  inset-inline-start: 0.3125rem;
+  width: 1px;
+  background: var(--brass);
+  opacity: 0.55;
+}
+
+.timeline-node {
+  position: relative;
+}
+
+.timeline-node::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: -1.75rem;
+  top: 0.5rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--brass);
+  transform: rotate(45deg);
+}
+
+/* Registration is where the record begins; give it a filled marker. */
+.timeline-node[data-origin='true']::before {
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--brass);
+}

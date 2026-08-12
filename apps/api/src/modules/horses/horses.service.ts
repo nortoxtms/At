@@ -351,7 +351,8 @@ export class HorsesService {
    * thing rendered on both the owner view and the listing page, and it is the
    * component §18.2 S08 step 7 tells us to give visual weight.
    */
-  async timeline(horseId: string, viewerId: string | null): Promise<unknown[]> {
+  async timeline(idOrSlug: string, viewerId: string | null): Promise<unknown[]> {
+    const horseId = await this.resolveHorseId(idOrSlug);
     const canSeeHealth = await this.canSeeHealth(horseId, viewerId);
 
     const rows = await this.db.queryAs<{
@@ -417,6 +418,28 @@ export class HorsesService {
    * holder of an active grant. Sensitive records are excluded even then —
    * §18.2 S12's "Hassas (paylaşımda gizle)" toggle means exactly that.
    */
+  /**
+   * Resolves a slug to an id. Uses the SECURITY DEFINER lookup for the same
+   * reason as the uniqueness checks (migration 0020): `horses_select` hides
+   * most of the table, so a plain lookup would fail for exactly the public
+   * listings the web renders.
+   */
+  private async resolveHorseId(idOrSlug: string): Promise<string> {
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug)) {
+      return idOrSlug;
+    }
+
+    const rows = await this.db.query<{ id: string }>(
+      `SELECT id FROM horses WHERE slug = $1 AND deleted_at IS NULL`,
+      [idOrSlug],
+    );
+
+    const horse = rows[0];
+    if (!horse) throw ApiException.notFound('At');
+
+    return horse.id;
+  }
+
   private async canSeeHealth(horseId: string, viewerId: string | null): Promise<boolean> {
     if (!viewerId) return false;
 

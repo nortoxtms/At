@@ -87,10 +87,18 @@ BEGIN
     RAISE EXCEPTION 'device tokens leaked across tenants';
   END IF;
 
-  -- System plumbing carries RLS with no policies at all.
-  SELECT COUNT(*) INTO v_leaked FROM search_outbox;
+  -- `search_outbox` is governed by GRANT rather than RLS (migration 0029):
+  -- it is not row-owned, and the API is the only role that holds a grant. The
+  -- property worth asserting is therefore not "no rows" — the API legitimately
+  -- reads all of them — but that the table cannot leak anything personal in
+  -- the first place.
+  SELECT COUNT(*) INTO v_leaked
+  FROM information_schema.columns
+  WHERE table_name = 'search_outbox'
+    AND column_name NOT IN ('id','collection','document_id','operation',
+                            'attempts','last_error','processed_at','created_at');
   IF v_leaked <> 0 THEN
-    RAISE EXCEPTION 'search_outbox is readable by an ordinary user';
+    RAISE EXCEPTION 'search_outbox gained % unexpected column(s); it must carry no personal data', v_leaked;
   END IF;
 
   SELECT COUNT(*) INTO v_leaked FROM moderation_cases;

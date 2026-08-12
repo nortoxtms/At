@@ -143,4 +143,73 @@ for leaked in ('performed_on','clinic','vaccination','aşı','next_due','notes',
 print('  no health or identity fields present in search results')"
 pass "index projection is clean"
 
-printf '\n\033[32m✓ M2 search acceptance complete\033[0m\n'
+# ── §19.2 / §24: server-rendered, indexable listing pages ──────────────
+say "7. §19.2 — listing page renders server-side"
+
+SLUG=$(curl -sS "$API/v1/listings/search?limit=1&sort=newest" | json "d['data'][0]['slug']")
+curl -sS -o /tmp/oh-listing.html -w '%{http_code}' "$WEB/tr/atlar/$SLUG" > /tmp/oh-status
+[ "$(cat /tmp/oh-status)" = "200" ] || fail "listing page returned HTTP $(cat /tmp/oh-status)"
+
+# Server-rendered means the content is in the initial HTML — what a crawler
+# and a user on a slow connection actually receive.
+grep -q "<h1" /tmp/oh-listing.html || fail "no <h1> in the server response"
+grep -q "Atı görmeden ödeme yapmayın" /tmp/oh-listing.html \
+  || fail "§14.3 safety card missing from the server response"
+grep -q "Bu atın geçmişi" /tmp/oh-listing.html \
+  || fail "§20.4 timeline missing from the server response"
+pass "page, safety card and timeline all present without JavaScript"
+
+say "8. §19.2 — structured data"
+python3 - <<'PYEOF'
+import json, re, sys
+
+html = open('/tmp/oh-listing.html', encoding='utf-8').read()
+blocks = [json.loads(b) for b in
+          re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, re.S)]
+types = {b['@type'] for b in blocks}
+
+# §19.2 requires Product + Offer on listings and BreadcrumbList everywhere.
+assert 'Product' in types, 'no Product JSON-LD'
+assert 'BreadcrumbList' in types, 'no BreadcrumbList JSON-LD'
+
+product = next(b for b in blocks if b['@type'] == 'Product')
+
+# Google's Rich Results requirements for Product.
+assert product.get('name'), 'Product.name is required'
+assert product.get('@context') == 'https://schema.org', 'wrong @context'
+
+offer = product.get('offers')
+if offer:
+    for field in ('price', 'priceCurrency', 'availability'):
+        assert offer.get(field) is not None, f'Offer.{field} is required'
+    assert isinstance(offer['price'], (int, float)), 'Offer.price must be numeric'
+    assert offer['availability'].startswith('https://schema.org/'), 'bad availability enum'
+    print(f"  Product + Offer · {offer['price']} {offer['priceCurrency']} · "
+          f"{offer['availability'].rsplit('/', 1)[1]}")
+else:
+    # A listing priced "on request" ships no Offer rather than an invalid one.
+    assert product.get('name'), 'Product without Offer still needs a name'
+    print('  Product without Offer (fiyat sorunuz) — valid')
+
+crumbs = next(b for b in blocks if b['@type'] == 'BreadcrumbList')
+positions = [i['position'] for i in crumbs['itemListElement']]
+assert positions == list(range(1, len(positions) + 1)), 'breadcrumb positions must be 1..n'
+print(f"  BreadcrumbList · {len(positions)} levels")
+
+props = {p['name'] for p in product.get('additionalProperty', [])}
+print(f"  additionalProperty · {', '.join(sorted(props))}")
+PYEOF
+pass "structured data satisfies the Product, Offer and BreadcrumbList requirements"
+
+say "9. §19.2 — sitemap and robots"
+curl -sS "$WEB/sitemap.xml" -o /tmp/oh-sitemap.xml
+grep -q "<urlset" /tmp/oh-sitemap.xml || fail "sitemap.xml is not a urlset"
+URLS=$(grep -c "<loc>" /tmp/oh-sitemap.xml)
+[ "$URLS" -gt 10 ] || fail "sitemap carries only $URLS URLs"
+grep -q "atlar/" /tmp/oh-sitemap.xml || fail "sitemap contains no listing URLs"
+pass "sitemap.xml lists $URLS URLs including listings"
+
+curl -sS "$WEB/robots.txt" | grep -q "Sitemap:" || fail "robots.txt does not reference the sitemap"
+pass "robots.txt points at the sitemap"
+
+printf '\n\033[32m✓ M2 acceptance complete\033[0m\n'

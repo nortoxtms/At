@@ -76,14 +76,20 @@ export class HorsesController {
     await this.horses.softDelete(profileId, id);
   }
 
-  /** §20.4 — the signature element. */
-  @Get('horses/:id/timeline')
+  /**
+   * §20.4 — the signature element.
+   *
+   * Accepts a slug as well as an id: the web listing page (§19.1) knows the
+   * horse by slug, and requiring a UUID there would mean an extra round trip
+   * on the page §1.3 P6 cares most about.
+   */
+  @Get('horses/:idOrSlug/timeline')
   @OptionalAuth()
   async timeline(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('idOrSlug') idOrSlug: string,
     @CurrentProfileId() profileId: string | null,
   ) {
-    return { data: await this.horses.timeline(id, profileId) };
+    return { data: await this.horses.timeline(idOrSlug, profileId) };
   }
 
   @Get('horses/:id/media')

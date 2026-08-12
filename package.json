@@ -18,7 +18,8 @@
     "seed:ref": "node scripts/migrate.mjs --seed",
     "seed:dev": "pnpm --filter @only-horses/api seed:dev",
     "format": "prettier --write \"**/*.{ts,tsx,json,md,yml,sql}\"",
-    "db:status": "node scripts/migrate.mjs --status"
+    "db:status": "node scripts/migrate.mjs --status",
+    "test:db": "bash scripts/test-db.sh"
   },
   "devDependencies": {
     "pg": "^8.23.0",

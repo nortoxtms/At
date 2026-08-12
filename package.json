@@ -16,7 +16,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:reset": "node scripts/migrate.mjs --reset",
     "seed:ref": "node scripts/migrate.mjs --seed",
-    "seed:dev": "pnpm --filter @only-horses/api seed:dev",
+    "seed:dev": "node apps/api/scripts/seed-dev.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,json,md,yml,sql}\"",
     "db:status": "node scripts/migrate.mjs --status",
     "test:db": "bash scripts/test-db.sh"

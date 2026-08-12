@@ -13,7 +13,9 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { EntitlementsModule } from './modules/entitlements/entitlements.module.js';
 import { HealthRecordsModule } from './modules/health-records/health-records.module.js';
 import { HorsesModule } from './modules/horses/horses.module.js';
+import { ListingsModule } from './modules/listings/listings.module.js';
 import { MediaModule } from './modules/media/media.module.js';
+import { SearchModule } from './modules/search/search.module.js';
 import { ProfilesModule } from './modules/profiles/profiles.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { ReferenceModule } from './modules/reference/reference.module.js';
@@ -35,6 +37,13 @@ import { ReferenceModule } from './modules/reference/reference.module.js';
     MediaModule,
     HorsesModule,
     HealthRecordsModule,
+    // SearchModule before ListingsModule, and it matters: Nest matches routes
+    // in registration order, so `GET /listings/:idOrSlug` would otherwise
+    // shadow `GET /listings/search` and every search would 404 as a missing
+    // listing. scripts/m2-acceptance.sh hits the search route first so a
+    // reordering fails loudly instead of silently.
+    SearchModule,
+    ListingsModule,
     ReferenceModule,
     HealthModule,
     JobsModule,

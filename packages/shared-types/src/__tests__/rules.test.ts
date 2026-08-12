@@ -5,6 +5,7 @@ import {
   checkPublishPreconditions,
   cmToHands,
   computeQualityScore,
+  listingSearchSchema,
   detectOffsitePaymentLanguage,
   findContactInfo,
   meetsVerification,
@@ -287,5 +288,28 @@ describe('§14.2 off-platform payment language', () => {
 
   it('does not flag ordinary arrangements', () => {
     expect(detectOffsitePaymentLanguage('Cumartesi ata bakmaya gelebilir miyim?')).toBe(false);
+  });
+});
+
+describe('§18.2 S07 boolean query parameters', () => {
+  it('reads "false" as false', () => {
+    // z.coerce.boolean() would make this true — Boolean("false") is true —
+    // and `?includeOnRequest=false` would silently do nothing.
+    const parsed = listingSearchSchema.parse({ includeOnRequest: 'false', hasVideo: 'false' });
+    expect(parsed.includeOnRequest).toBe(false);
+    expect(parsed.hasVideo).toBe(false);
+  });
+
+  it('reads "true" and "1" as true', () => {
+    expect(listingSearchSchema.parse({ hasVideo: 'true' }).hasVideo).toBe(true);
+    expect(listingSearchSchema.parse({ hasVideo: '1' }).hasVideo).toBe(true);
+  });
+
+  it('defaults includeOnRequest to true when absent', () => {
+    expect(listingSearchSchema.parse({}).includeOnRequest).toBe(true);
+  });
+
+  it('rejects a value that is neither', () => {
+    expect(() => listingSearchSchema.parse({ hasVideo: 'maybe' })).toThrow();
   });
 });

@@ -3,6 +3,8 @@ export * from './api.js';
 export * from './limits.js';
 export * from './quality-score.js';
 export * from './listing-lifecycle.js';
+export * from './horse.js';
+export * from './health.js';
 export * from './trust.js';
 export * from './units.js';
 export * as tokens from './tokens.js';

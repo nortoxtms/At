@@ -7,7 +7,14 @@ import { DatabaseModule } from './database/database.module.js';
 import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
 import { AuthGuard } from './common/guards/auth.guard.js';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware.js';
+import { JobsModule } from './jobs/jobs.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { EntitlementsModule } from './modules/entitlements/entitlements.module.js';
+import { HealthRecordsModule } from './modules/health-records/health-records.module.js';
+import { HorsesModule } from './modules/horses/horses.module.js';
+import { MediaModule } from './modules/media/media.module.js';
+import { ProfilesModule } from './modules/profiles/profiles.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { ReferenceModule } from './modules/reference/reference.module.js';
 
@@ -21,9 +28,16 @@ import { ReferenceModule } from './modules/reference/reference.module.js';
       envFilePath: ['.env.local', '.env', '../../.env'],
     }),
     DatabaseModule,
+    EntitlementsModule,
+    NotificationsModule,
     AuthModule,
+    ProfilesModule,
+    MediaModule,
+    HorsesModule,
+    HealthRecordsModule,
     ReferenceModule,
     HealthModule,
+    JobsModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: ApiExceptionFilter },

@@ -1,6 +1,18 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import pg, { Pool, type PoolClient, type QueryResultRow } from 'pg';
+
+/**
+ * Return `date` columns as the 'YYYY-MM-DD' string Postgres stores, not a JS
+ * Date.
+ *
+ * Everything the schema types as `date` is a calendar date — a foaling day, a
+ * vaccination due date, an ownership from_date. Parsing those into a Date
+ * anchors them to the server's timezone, and formatting them back shifts them
+ * by a day for anyone west of UTC. §17's reminders fire on the day, so a
+ * one-day drift is a user-visible defect rather than a formatting nit.
+ */
+pg.types.setTypeParser(pg.types.builtins.DATE, (value: string) => value);
 
 import type { Env } from '../config/env.js';
 
@@ -72,13 +84,40 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Unscoped query. For reference data and system work only. */
+  /**
+   * Query with NO user identity attached.
+   *
+   * `auth.uid()` is NULL here, so RLS evaluates this exactly as it would an
+   * anonymous request — this is not a privileged escape hatch. Use it only for
+   * world-readable reference data (breeds, disciplines, fx rates) and for
+   * SECURITY DEFINER functions that deliberately answer one narrow question.
+   *
+   * For anything belonging to a user, use `queryAs` or `withUser`: reaching
+   * for this method instead silently returns zero rows, which reads as "the
+   * user has none" rather than as an error.
+   */
   async query<T extends QueryResultRow>(
     text: string,
     params: unknown[] = [],
   ): Promise<T[]> {
     const result = await this.pool.query<T>(text, params);
     return result.rows;
+  }
+
+  /**
+   * Single query carrying the caller's identity, so the §8 policies apply.
+   * The common case; `withUser` is for multi-statement work that must also be
+   * atomic.
+   */
+  async queryAs<T extends QueryResultRow>(
+    profileId: string | null,
+    text: string,
+    params: unknown[] = [],
+  ): Promise<T[]> {
+    return this.withUser(profileId, async (client) => {
+      const result = await client.query<T>(text, params);
+      return result.rows;
+    });
   }
 
   /**

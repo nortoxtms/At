@@ -13,6 +13,7 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.14.0",
     "@nestjs/common": "^10.4.4",
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.4.4",
@@ -21,12 +22,14 @@
     "@nestjs/swagger": "^7.4.2",
     "@nestjs/terminus": "^10.2.3",
     "@only-horses/shared-types": "workspace:*",
+    "blurhash": "^2.0.5",
     "firebase-admin": "^12.6.0",
     "helmet": "^8.0.0",
     "nanoid": "^3.3.7",
     "pg": "^8.13.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sharp": "^0.33.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

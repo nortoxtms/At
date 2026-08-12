@@ -60,3 +60,7 @@ mobile/.expo/
 mobile/dist/
 mobile/ios/
 mobile/android/
+
+# local storage provider (development only)
+.storage/
+apps/api/.storage/

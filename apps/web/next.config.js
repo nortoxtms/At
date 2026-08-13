@@ -1,6 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Cloud Run runs the standalone server (apps/web/Dockerfile): Next traces
+  // exactly the files the build needs, so the image carries the server and
+  // its dependencies rather than the whole pnpm workspace.
+  output: 'standalone',
+  // The trace has to start at the repo root, or a monorepo build silently
+  // omits the workspace packages it linked to.
+  outputFileTracingRoot: require('node:path').join(__dirname, '../../'),
   // shared-types ships TypeScript source; Next compiles it with the app so
   // web and mobile consume the same files without a build step.
   transpilePackages: ['@only-horses/shared-types'],

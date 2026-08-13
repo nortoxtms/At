@@ -12,6 +12,7 @@ export * from './job.js';
 export * from './review.js';
 export * from './saved.js';
 export * from './directory.js';
+export * from './organization.js';
 export * from './welfare.js';
 export * from './health.js';
 export * from './trust.js';

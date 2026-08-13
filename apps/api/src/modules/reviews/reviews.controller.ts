@@ -74,6 +74,24 @@ export class ReviewsController {
     return { data: result.reviews, meta: { summary: result.summary } };
   }
 
+  /**
+   * §12 GET /profiles/:id/reviews.
+   *
+   * The same data as `GET /reviews?subjectProfileId=`, under the path §12
+   * names — a profile page asks for "this person's reviews", not for a
+   * filtered review collection.
+   */
+  @Get('profiles/:id/reviews')
+  @Public()
+  async forProfile(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    const result = await this.reviews.listFor({ profileId: id }, Number(page), Math.min(Number(limit), 50));
+    return { data: result.reviews, meta: { summary: result.summary } };
+  }
+
   /** §13.4: one response, no threading. */
   @Patch('reviews/:id/response')
   @HttpCode(HttpStatus.NO_CONTENT)

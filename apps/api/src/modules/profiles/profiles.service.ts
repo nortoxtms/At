@@ -224,6 +224,100 @@ export class ProfilesService {
     return rows[0]!;
   }
 
+  /** §12 PATCH /me/roles/:roleId — the role profile is the professional's page. */
+  async updateRole(
+    profileId: string,
+    roleId: string,
+    input: Record<string, unknown>,
+  ): Promise<void> {
+    const columns: Record<string, unknown> = {
+      headline: input.headline,
+      about: input.about,
+      years_experience: input.yearsExperience,
+      specialties: input.specialties,
+      disciplines: input.disciplines,
+      service_radius_km: input.serviceRadiusKm,
+      travels: input.travels,
+      hourly_rate_min: input.hourlyRateMin,
+      hourly_rate_max: input.hourlyRateMax,
+      currency: input.currency,
+      is_primary: input.isPrimary,
+      is_public: input.isPublic,
+    };
+
+    const present = Object.entries(columns).filter(([, value]) => value !== undefined);
+    if (present.length === 0) return;
+
+    const updated = await this.db.withUser(profileId, async (client) => {
+      const assignments = present.map(([column], index) => `${column} = $${index + 3}`);
+      const result = await client.query(
+        `UPDATE role_profiles SET ${assignments.join(', ')}
+         WHERE id = $1 AND profile_id = $2 RETURNING id`,
+        [roleId, profileId, ...present.map(([, value]) => value)],
+      );
+      return result.rows;
+    });
+
+    if (updated.length === 0) throw ApiException.notFound('Rol profili');
+  }
+
+  /**
+   * §12 POST /me/roles/:roleId/credentials.
+   *
+   * A credential is a *claim* until a moderator approves it (§14.1): the row
+   * carries the evidence and `verified_at` stays null, so nothing here can
+   * grant a badge on its own.
+   */
+  async addCredential(
+    profileId: string,
+    roleId: string,
+    input: { title: string; issuer?: string; issuedOn?: string; expiresOn?: string; mediaId?: string },
+  ): Promise<{ id: string }> {
+    const owns = await this.db.queryAs<{ id: string }>(
+      profileId,
+      `SELECT id FROM role_profiles WHERE id = $1 AND profile_id = $2`,
+      [roleId, profileId],
+    );
+
+    if (!owns[0]) throw ApiException.notFound('Rol profili');
+
+    const rows = await this.db.withUser(profileId, async (client) => {
+      const result = await client.query<{ id: string }>(
+        `INSERT INTO credentials (role_profile_id, title, issuer, issued_on, expires_on, document_media_id)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         RETURNING id`,
+        [
+          roleId,
+          input.title,
+          input.issuer ?? null,
+          input.issuedOn ?? null,
+          input.expiresOn ?? null,
+          input.mediaId ?? null,
+        ],
+      );
+      return result.rows;
+    });
+
+    return rows[0]!;
+  }
+
+  /** §12 POST /me/avatar {mediaId}. */
+  async setAvatar(profileId: string, mediaId: string): Promise<void> {
+    const owns = await this.db.queryAs<{ id: string }>(
+      profileId,
+      // The image has to be this user's own upload; otherwise anyone could
+      // point their avatar at someone else's private media id.
+      `SELECT id FROM media WHERE id = $1 AND owner_profile_id = $2 AND type = 'image'`,
+      [mediaId, profileId],
+    );
+
+    if (!owns[0]) throw ApiException.notFound('Görsel');
+
+    await this.db.withUser(profileId, (client) =>
+      client.query(`UPDATE profiles SET avatar_media_id = $2 WHERE id = $1`, [profileId, mediaId]),
+    );
+  }
+
   async removeRole(profileId: string, roleId: string): Promise<void> {
     const result = await this.db.withUser(profileId, (client) =>
       client.query(`DELETE FROM role_profiles WHERE id = $1 AND profile_id = $2`, [

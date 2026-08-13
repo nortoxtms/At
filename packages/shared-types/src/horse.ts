@@ -141,3 +141,25 @@ export interface MicrochipConflict {
   horseName: string;
   ownerDisplayName: string | null;
 }
+
+/**
+ * §12 POST /horses/:id/competitions — §18.2 S11's results section.
+ *
+ * A result may name a rider who has no account (`riderName`), because most
+ * competition records predate the platform. Either the id or the text, and
+ * neither is required: plenty of results are just "the horse placed".
+ */
+export const competitionSchema = z.object({
+  eventDate: z.string().date(),
+  eventName: z.string().trim().min(2).max(160),
+  discipline: z.string().trim().max(60).optional(),
+  className: z.string().trim().max(120).optional(),
+  level: z.string().trim().max(60).optional(),
+  placing: z.number().int().min(1).max(999).optional(),
+  score: z.number().min(0).max(1000).optional(),
+  location: z.string().trim().max(160).optional(),
+  riderProfileId: z.string().uuid().optional(),
+  riderName: z.string().trim().max(160).optional(),
+  proofMediaId: z.string().uuid().optional(),
+});
+export type CompetitionInput = z.infer<typeof competitionSchema>;

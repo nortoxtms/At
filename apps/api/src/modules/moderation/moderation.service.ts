@@ -317,4 +317,18 @@ export class ModerationService {
     const rows = await this.db.query<{ id: string | null }>(sql, [targetId]);
     return rows[0]?.id ?? null;
   }
+  /**
+   * §23 M6 / §22. One function call (migration 0051): every number crosses
+   * tenants, which no policy will ever allow, and computing them one query at
+   * a time from here would be a dozen round trips for a dashboard.
+   */
+  async metrics(profileId: string, days = 7): Promise<Record<string, unknown>> {
+    const rows = await this.db.query<{ admin_metrics: Record<string, unknown> }>(
+      `SELECT admin_metrics($1, $2)`,
+      [profileId, Number.isFinite(days) ? Math.min(Math.max(days, 1), 365) : 7],
+    );
+
+    return rows[0]?.admin_metrics ?? {};
+  }
+
 }

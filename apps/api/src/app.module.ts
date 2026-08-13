@@ -24,6 +24,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { BillingModule } from './modules/billing/billing.module.js';
 import { SavedModule } from './modules/saved/saved.module.js';
 import { PrivacyModule } from './modules/privacy/privacy.module.js';
+import { OrganizationsModule } from './modules/organizations/organizations.module.js';
 import { MediaModule } from './modules/media/media.module.js';
 import { SearchModule } from './modules/search/search.module.js';
 import { ProfilesModule } from './modules/profiles/profiles.module.js';
@@ -64,6 +65,7 @@ import { ReferenceModule } from './modules/reference/reference.module.js';
     BillingModule,
     SavedModule,
     PrivacyModule,
+    OrganizationsModule,
     VerificationModule,
     AccessGrantsModule,
     ModerationModule,

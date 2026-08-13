@@ -34,6 +34,16 @@ const updateMeSchema = z.object({
   onboardingStep: z.string().max(60).nullish(),
 });
 
+const credentialSchema = z.object({
+  title: z.string().trim().min(2).max(160),
+  issuer: z.string().trim().max(160).optional(),
+  issuedOn: z.string().date().optional(),
+  expiresOn: z.string().date().optional(),
+  mediaId: z.string().uuid().optional(),
+});
+
+const avatarSchema = z.object({ mediaId: z.string().uuid() });
+
 const addRoleSchema = z.object({
   role: roleType,
   headline: z.string().trim().max(160).optional(),
@@ -84,6 +94,36 @@ export class ProfilesController {
     @Body(zodBody(addRoleSchema)) body: z.infer<typeof addRoleSchema>,
   ) {
     return { data: await this.profiles.addRole(profileId, body) };
+  }
+
+  @Patch('me/roles/:roleId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async updateRole(
+    @CurrentProfileId() profileId: string,
+    @Param('roleId', ParseUUIDPipe) roleId: string,
+    @Body(zodBody(addRoleSchema.partial().omit({ role: true }))) body: Record<string, unknown>,
+  ): Promise<void> {
+    await this.profiles.updateRole(profileId, roleId, body);
+  }
+
+  /** §14.1: a credential is a claim until a moderator approves it. */
+  @Post('me/roles/:roleId/credentials')
+  @HttpCode(HttpStatus.CREATED)
+  async addCredential(
+    @CurrentProfileId() profileId: string,
+    @Param('roleId', ParseUUIDPipe) roleId: string,
+    @Body(zodBody(credentialSchema)) body: z.infer<typeof credentialSchema>,
+  ) {
+    return { data: await this.profiles.addCredential(profileId, roleId, body) };
+  }
+
+  @Post('me/avatar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async setAvatar(
+    @CurrentProfileId() profileId: string,
+    @Body(zodBody(avatarSchema)) body: z.infer<typeof avatarSchema>,
+  ): Promise<void> {
+    await this.profiles.setAvatar(profileId, body.mediaId);
   }
 
   @Delete('me/roles/:roleId')

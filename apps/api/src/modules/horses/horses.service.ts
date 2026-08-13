@@ -351,6 +351,66 @@ export class HorsesService {
    * thing rendered on both the owner view and the listing page, and it is the
    * component §18.2 S08 step 7 tells us to give visual weight.
    */
+  /**
+   * §12 GET /horses/:id/competitions.
+   *
+   * `competitions_select` (§8) shows results to whoever can edit the horse and
+   * to anyone while it is publicly listed — a competition record is part of
+   * what a buyer is buying, so it travels with the listing.
+   */
+  async competitions(horseId: string, viewerId: string | null): Promise<unknown[]> {
+    const sql = `SELECT c.id, c.event_date, c.event_name, c.discipline, c.class_name,
+                        c.level, c.placing, c.score, c.location,
+                        COALESCE(p.display_name, c.rider_name_text) AS rider_name,
+                        m.cf_image_id AS proof_image
+                 FROM horse_competition_results c
+                 LEFT JOIN profiles p ON p.id = c.rider_profile_id
+                 LEFT JOIN media m ON m.id = c.proof_media_id
+                 WHERE c.horse_id = $1
+                 ORDER BY c.event_date DESC`;
+
+    return viewerId
+      ? this.db.queryAs(viewerId, sql, [horseId])
+      : this.db.query(sql, [horseId]);
+  }
+
+  /** §12 POST /horses/:id/competitions. */
+  async addCompetition(
+    profileId: string,
+    horseId: string,
+    input: Record<string, unknown>,
+  ): Promise<{ id: string }> {
+    await this.assertCanEdit(profileId, horseId);
+
+    const rows = await this.db.withUser(profileId, async (client) => {
+      const result = await client.query<{ id: string }>(
+        // "placing" is a reserved word in Postgres, hence the quotes.
+        `INSERT INTO horse_competition_results
+           (horse_id, event_date, event_name, discipline, class_name, level,
+            "placing", score, location, rider_profile_id, rider_name_text, proof_media_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         RETURNING id`,
+        [
+          horseId,
+          input.eventDate,
+          input.eventName,
+          input.discipline ?? null,
+          input.className ?? null,
+          input.level ?? null,
+          input.placing ?? null,
+          input.score ?? null,
+          input.location ?? null,
+          input.riderProfileId ?? null,
+          input.riderName ?? null,
+          input.proofMediaId ?? null,
+        ],
+      );
+      return result.rows;
+    });
+
+    return rows[0]!;
+  }
+
   async timeline(idOrSlug: string, viewerId: string | null): Promise<unknown[]> {
     const horseId = await this.resolveHorseId(idOrSlug);
     const canSeeHealth = await this.canSeeHealth(horseId, viewerId);

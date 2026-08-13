@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Query, UseGuards, Headers, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  ForbiddenException,
+  Get,
+  Headers,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   jobSearchSchema,
@@ -115,6 +125,33 @@ export class SearchController {
     const query = professionalSearchSchema.parse(normalizeArrays(rawQuery));
     query.excludeProfileIds = await this.blockedBy(profileId);
     return envelope(await this.search.searchProfessionals(query));
+  }
+
+  /**
+   * §12 GET /search/suggest?q= — typeahead across all entities.
+   *
+   * One database round trip (migration 0050) rather than four searches: a
+   * suggestion list that arrives after the user has finished typing is not a
+   * suggestion list.
+   */
+  @Get('search/suggest')
+  @Public()
+  @RateLimit({ limit: 300, windowSeconds: 60, per: 'ip' })
+  async suggest(@Query('q') q?: string) {
+    const term = (q ?? '').trim();
+    // Two characters is where a prefix stops matching half the corpus.
+    if (term.length < 2) return { data: [] };
+
+    return {
+      data: await this.db.query(`SELECT * FROM search_suggest($1, $2)`, [term, 8]),
+    };
+  }
+
+  /** §12 GET /listings/similar/:id — §18.2 S08's "benzer ilanlar". */
+  @Get('listings/similar/:id')
+  @Public()
+  async similar(@Param('id', ParseUUIDPipe) id: string) {
+    return { data: await this.db.query(`SELECT * FROM similar_listings($1, $2)`, [id, 6]) };
   }
 
   /** §11.4 outbox drain, invoked by Cloud Scheduler. */

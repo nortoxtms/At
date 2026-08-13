@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import {
   attachHorseMediaSchema,
+  competitionSchema,
   createHorseSchema,
   reorderHorseMediaSchema,
   transferHorseSchema,
@@ -83,6 +84,26 @@ export class HorsesController {
    * horse by slug, and requiring a UUID there would mean an extra round trip
    * on the page §1.3 P6 cares most about.
    */
+  /** §12 GET /horses/:id/competitions — public while the horse is listed. */
+  @Get('horses/:id/competitions')
+  @OptionalAuth()
+  async competitions(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentProfileId() profileId: string | null,
+  ) {
+    return { data: await this.horses.competitions(id, profileId) };
+  }
+
+  @Post('horses/:id/competitions')
+  @HttpCode(HttpStatus.CREATED)
+  async addCompetition(
+    @CurrentProfileId() profileId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(zodBody(competitionSchema)) body: z.infer<typeof competitionSchema>,
+  ) {
+    return { data: await this.horses.addCompetition(profileId, id, body) };
+  }
+
   @Get('horses/:idOrSlug/timeline')
   @OptionalAuth()
   async timeline(

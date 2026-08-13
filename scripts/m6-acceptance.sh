@@ -356,4 +356,70 @@ OTHERS=$(curl -sS "$API/v1/listings/search?q=M6BLOCK-$STAMP&limit=20" | json "d[
 [ "$OTHERS" -ge 1 ] || fail "blocking removed the listings for everyone, not just the blocker"
 pass "the blocked seller disappears for the blocker and stays visible to everyone else"
 
+# ── 7. §12 — the endpoints that had never been written ─────────────────
+say "7. §12 — organizations, typeahead, similar listings, competitions"
+
+ORG=$(curl -sS -X POST "$API/v1/organizations" -H "authorization: Bearer $BLOCKER" \
+  -H 'content-type: application/json' \
+  -d "{\"name\":\"M6 Hara $STAMP\",\"type\":\"ranch\",\"countryCode\":\"TR\",\"city\":\"Kayseri\"}")
+ORG_ID=$(echo "$ORG" | json "d['data']['id']")
+ORG_SLUG=$(echo "$ORG" | json "d['data']['slug']")
+
+# The creator must be the owner — otherwise nobody could ever administer it.
+ROLE=$(psql "$DB" -tAc "SELECT role FROM organization_members
+                        WHERE organization_id = '$ORG_ID' AND profile_id = '$BLOCKER_ID'")
+[ "$ROLE" = "owner" ] || fail "the creator is '$ROLE', not owner"
+
+PAGE=$(curl -sS "$API/v1/organizations/$ORG_SLUG")
+echo "$PAGE" | json "d['data']['name']" | grep -q "M6 Hara" || fail "the public org page is missing: $PAGE"
+pass "an organization is created with its owner in one step and has a public page"
+
+OUTSIDER_EDIT=$(curl -sS -X PATCH "$API/v1/organizations/$ORG_ID" -H "authorization: Bearer $RIVAL" \
+  -H 'content-type: application/json' -d '{"about":"izinsiz düzenleme"}')
+echo "$OUTSIDER_EDIT" | grep -q "bulunamad" || fail "a non-member edited an organization: $OUTSIDER_EDIT"
+
+LAST_OWNER=$(curl -sS -X DELETE "$API/v1/organizations/$ORG_ID/members/$BLOCKER_ID" \
+  -H "authorization: Bearer $BLOCKER")
+echo "$LAST_OWNER" | grep -q "tek sahibi" || fail "the last owner could remove themselves: $LAST_OWNER"
+pass "non-members cannot edit, and the last owner cannot be removed"
+
+SUGGEST=$(curl -sS "$API/v1/search/suggest?q=M6BLOCK-$STAMP")
+[ "$(echo "$SUGGEST" | json "len(d['data'])")" -ge 1 ] || fail "typeahead found nothing: $SUGGEST"
+SHORT=$(curl -sS "$API/v1/search/suggest?q=a" | json "len(d['data'])")
+[ "$SHORT" = "0" ] || fail "a one-character query returned $SHORT suggestions"
+pass "typeahead answers across entities and ignores a one-character query"
+
+BLOCK_LISTING=$(psql "$DB" -tAc "SELECT id FROM listings WHERE slug = 'm6-listing-block-$STAMP'")
+SIMILAR=$(curl -sS "$API/v1/listings/similar/$BLOCK_LISTING")
+echo "$SIMILAR" | python3 -c "
+import json,sys
+hits = json.load(sys.stdin)['data']
+assert all(h['id'] != '$BLOCK_LISTING' for h in hits), 'a listing is similar to itself'
+" || fail "similar listings include the listing itself"
+pass "similar listings exclude the source listing"
+
+HORSE_ID=$(psql "$DB" -tAc "SELECT id FROM horses WHERE slug = 'm6-horse-block-$STAMP'")
+curl -sS -X POST "$API/v1/horses/$HORSE_ID/competitions" -H "authorization: Bearer $RIVAL" \
+  -H 'content-type: application/json' \
+  -d '{"eventDate":"2026-05-12","eventName":"Ankara Dresaj Kupası","discipline":"dressage",
+       "level":"L","placing":2,"score":68.4,"riderName":"Ayşe Yılmaz"}' > /dev/null
+
+COMPS=$(curl -sS "$API/v1/horses/$HORSE_ID/competitions")
+echo "$COMPS" | json "d['data'][0]['rider_name']" | grep -q "Ayşe" \
+  || fail "the competition result did not save its rider: $COMPS"
+pass "competition results save and read back, including a rider with no account"
+
+METRICS_DENIED=$(curl -sS "$API/v1/admin/metrics" -H "authorization: Bearer $RIVAL")
+echo "$METRICS_DENIED" | grep -q "bulunamad" || fail "a non-moderator read the admin metrics"
+
+psql "$DB" -q -c "UPDATE profiles SET is_moderator = TRUE WHERE id = '$RIVAL_ID'"
+METRICS=$(curl -sS "$API/v1/admin/metrics?days=7" -H "authorization: Bearer $RIVAL")
+for KEY in qualifiedInquiries listingsActive moderationOpen searchBacklog subscriptionsByTier; do
+  echo "$METRICS" | python3 -c "
+import json,sys
+assert '$KEY' in json.load(sys.stdin)['data'], 'missing $KEY'
+" || fail "the metrics payload is missing $KEY"
+done
+pass "§22's North Star and its guardrails are staff-only and complete"
+
 say "M6 acceptance: all checks passed"

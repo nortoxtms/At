@@ -74,6 +74,19 @@ export class AdminModerationController {
     private readonly verification: VerificationService,
   ) {}
 
+  /**
+   * §23 M6's admin metrics — §22's North Star ("weekly qualified inquiries")
+   * and the guardrails listed beside it.
+   *
+   * Staff-gated twice: `StaffGuard` on the controller, and the function checks
+   * again (migration 0051). Deliberate belt and braces — this is the one
+   * endpoint that reads every tenant's numbers at once.
+   */
+  @Get('metrics')
+  async metrics(@CurrentProfileId() profileId: string, @Query('days') days = '7') {
+    return { data: await this.moderation.metrics(profileId, Number(days)) };
+  }
+
   @Get('moderation/queue')
   async queue(
     @CurrentProfileId() moderatorId: string,

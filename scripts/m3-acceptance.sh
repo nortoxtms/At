@@ -225,12 +225,28 @@ pass "the admin queue is invisible to ordinary users"
 # with the old unpaginated endpoint it was not merely on a later page, there
 # was no later page. Asking for the whole queue is what makes this assertion
 # about the case rather than about how many fixtures previous runs left behind.
-QUEUE=$(curl -sS "$API/v1/admin/moderation/queue?status=open&limit=200" -H "authorization: Bearer $MODERATOR")
-TOTAL=$(echo "$QUEUE" | json "d['meta']['total']")
-FOUND=$(echo "$QUEUE" | json "sum(1 for c in d['data'] if c['target_id']=='$STOLEN')")
-[ "$FOUND" = "1" ] || fail "the phash case is not in the moderator's queue (queue reports $TOTAL open)"
-SEVERITIES=$(echo "$QUEUE" | json "[c['severity'] for c in d['data']][:5]")
-pass "case present; queue ordered by severity $SEVERITIES"
+# Paged, not capped. The queue is ordered by severity and then oldest-first,
+# so on a database with any history this run's case is at the back — and the
+# per-page limit is 200 by design. Walking the pages is what the endpoint's
+# `meta.hasMore` is for, and asserting through it is the point: this is the
+# moderator's actual path to the case.
+FOUND=0
+PAGE=1
+TOTAL=0
+SEVERITIES="[]"
+while [ "$PAGE" -le 20 ]; do
+  QUEUE=$(curl -sS "$API/v1/admin/moderation/queue?status=open&limit=200&page=$PAGE" \
+    -H "authorization: Bearer $MODERATOR")
+  TOTAL=$(echo "$QUEUE" | json "d['meta']['total']")
+  [ "$PAGE" = "1" ] && SEVERITIES=$(echo "$QUEUE" | json "[c['severity'] for c in d['data']][:5]")
+  FOUND=$(echo "$QUEUE" | json "sum(1 for c in d['data'] if c['target_id']=='$STOLEN')")
+  [ "$FOUND" = "1" ] && break
+  echo "$QUEUE" | json "d['meta']['hasMore']" | grep -q True || break
+  PAGE=$((PAGE + 1))
+done
+
+[ "$FOUND" = "1" ] || fail "the phash case is not in the moderator's queue ($TOTAL open, searched $PAGE page(s))"
+pass "case present on page $PAGE of $TOTAL open; queue ordered by severity $SEVERITIES"
 
 # ── DoD 3: a buyer can request and receive a health file ───────────────
 say "4. §2 / §24.4 — request and receive a health file"

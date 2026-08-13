@@ -337,11 +337,20 @@ export class HorsesService {
       );
     }
 
-    await this.db.withUser(profileId, (client) =>
-      client.query(`UPDATE horses SET deleted_at = now(), status = 'archived' WHERE id = $1`, [
+    // Not a plain UPDATE: `horses_select` requires `deleted_at IS NULL`, so the
+    // row this produces is one the table's own visibility rule rejects, and
+    // Postgres refuses it as an RLS violation rather than as a permission
+    // problem. The §7 function re-checks the same ownership (migration 0057).
+    const archived = await this.db.withUser(profileId, (client) =>
+      client.query<{ archive_horse: boolean }>(`SELECT archive_horse($1, $2) AS archive_horse`, [
+        profileId,
         horseId,
       ]),
     );
+
+    if (!archived.rows[0]?.archive_horse) {
+      throw ApiException.forbidden('Bu atı silme yetkin yok.');
+    }
   }
 
   /**
@@ -571,11 +580,19 @@ export class HorsesService {
       );
 
       // Edit rights move with ownership. This is the last statement the
-      // outgoing owner is able to run against this horse.
-      await client.query(
-        `UPDATE horses SET owner_profile_id = $2, owner_org_id = NULL WHERE id = $1`,
-        [horseId, recipient.id],
+      // outgoing owner is able to run against this horse — and it is why it
+      // cannot be a plain UPDATE: the row it writes belongs to somebody else,
+      // so `horses_write`'s WITH CHECK refuses it and the request 500s. The
+      // §7 function re-checks the same authorisation and moves the row in one
+      // statement (migration 0056).
+      const moved = await client.query<{ transfer_horse_ownership: boolean }>(
+        `SELECT transfer_horse_ownership($1, $2, $3) AS transfer_horse_ownership`,
+        [profileId, horseId, recipient.id],
       );
+
+      if (!moved.rows[0]?.transfer_horse_ownership) {
+        throw ApiException.forbidden('Bu atı devretme yetkin yok.');
+      }
     });
   }
 

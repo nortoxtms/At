@@ -40,6 +40,21 @@ interface Hit {
 export class RateLimitGuard implements CanActivate {
   private readonly hits = new Map<string, Hit>();
 
+  /**
+   * §24.15 asks for a p95 "at 200 concurrent users". A load generator runs from
+   * one machine — one IP, a handful of profiles — so §12's budgets would stop
+   * the run within seconds and the number produced would describe the rate
+   * limiter rather than the API. This scales the budgets for such a run.
+   *
+   * Production ignores it outright: this is deliberately not a tuning knob, and
+   * a `LOAD_TEST_RATE_MULTIPLIER` that leaked into a deployment must not be
+   * able to switch §12 off.
+   */
+  private readonly multiplier =
+    process.env.NODE_ENV === 'production'
+      ? 1
+      : Math.max(1, Number(process.env.LOAD_TEST_RATE_MULTIPLIER ?? 1) || 1);
+
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -61,17 +76,18 @@ export class RateLimitGuard implements CanActivate {
     const key = `${context.getClass().name}.${context.getHandler().name}:${identity}`;
     const now = Date.now();
     const windowStart = now - options.windowSeconds * 1000;
+    const limit = options.limit * this.multiplier;
 
     const entry = this.hits.get(key) ?? { timestamps: [] };
     entry.timestamps = entry.timestamps.filter((t) => t > windowStart);
 
-    if (entry.timestamps.length >= options.limit) {
+    if (entry.timestamps.length >= limit) {
       const oldest = entry.timestamps[0] ?? now;
       const retryAfter = Math.max(1, Math.ceil((oldest + options.windowSeconds * 1000 - now) / 1000));
 
       // §24.9 requires the Retry-After header, not just the status.
       response.setHeader('Retry-After', String(retryAfter));
-      response.setHeader('X-RateLimit-Limit', String(options.limit));
+      response.setHeader('X-RateLimit-Limit', String(limit));
       response.setHeader('X-RateLimit-Remaining', '0');
 
       throw new ApiException(
@@ -85,8 +101,8 @@ export class RateLimitGuard implements CanActivate {
     entry.timestamps.push(now);
     this.hits.set(key, entry);
 
-    response.setHeader('X-RateLimit-Limit', String(options.limit));
-    response.setHeader('X-RateLimit-Remaining', String(options.limit - entry.timestamps.length));
+    response.setHeader('X-RateLimit-Limit', String(limit));
+    response.setHeader('X-RateLimit-Remaining', String(limit - entry.timestamps.length));
 
     return true;
   }

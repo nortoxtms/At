@@ -17,8 +17,11 @@ EMAIL="m1-${STAMP}@example.com"
 # with the previous run's horse.
 CHIP="7520981${STAMP: -8}"
 PASSWORD="guclu-sifre-123"
-# The cron endpoint authenticates with the API's own secret (§17 job).
-CRON_SECRET="${CRON_SECRET:-dev-secret-that-is-definitely-long-enough-32}"
+# The cron endpoint authenticates with the API's own secret (§17 job) — it must
+# equal JWT_SECRET. This default matches .env.example and the other milestone
+# scripts; M1's used to differ, so §17's dispatch check failed on a secret
+# mismatch rather than on anything about reminders.
+CRON_SECRET="${CRON_SECRET:-local-dev-secret-only-not-for-production-32chars}"
 
 say() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 fail() { printf '\033[31m✗ %s\033[0m\n' "$1"; exit 1; }
@@ -51,6 +54,7 @@ pass "horse $HORSE_ID ($(echo "$HORSE" | json "d['data']['slug']"))"
 
 # ── 8 photos + 1 video through the real §10.1 pipeline ─────────────────
 say "3. Upload 8 photos and 1 video"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORKDIR=$(mktemp -d)
 trap 'rm -rf "$WORKDIR"' EXIT
 
@@ -64,7 +68,11 @@ upload_image() {
 
   # A distinct image per slot, so the §14.2 duplicate detector does not treat
   # our own fixtures as stolen photography.
-  INDEX="$index" OUT="$file" node -e "
+  # Run from apps/api: sharp is that package's dependency, and pnpm does not
+  # hoist it to the workspace root, so a bare `node -e` from the repo root
+  # cannot resolve it.
+  INDEX="$index" OUT="$file" node --eval "
+    module.paths.unshift('$REPO_ROOT/apps/api/node_modules');
     const sharp = require('sharp');
     const i = Number(process.env.INDEX);
     sharp({create:{width:640,height:427,channels:3,background:{r:i*25,g:120,b:i*10+40}}})
@@ -126,7 +134,10 @@ if command -v exiftool >/dev/null; then
     GPS=$(exiftool -q -q -s3 -gps:all "$image" 2>/dev/null | tr -d '[:space:]')
     [ -z "$GPS" ] || fail "GPS metadata survived in $image: $GPS"
     AUDITED=$((AUDITED + 1))
-  done < <(find .storage/image -name '*.jpg' 2>/dev/null | head -20)
+    # LocalStorageProvider writes under apps/api, not under whatever directory
+    # this script was invoked from. A relative path here silently audited zero
+    # files and reported §24.8 as unverifiable.
+  done < <(find "$REPO_ROOT/apps/api/.storage/image" -name '*.jpg' 2>/dev/null | head -20)
 
   [ "$AUDITED" -gt 0 ] || fail "no stored images found to audit"
   pass "exiftool reports no GPS tags across $AUDITED stored images"

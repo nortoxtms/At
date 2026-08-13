@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { ZodError } from 'zod';
 import type { ApiError, ErrorCode } from '@only-horses/shared-types';
 
 /** Domain error carrying a §12 error code. Thrown by services. */
@@ -84,6 +85,20 @@ export class ApiExceptionFilter implements ExceptionFilter {
       code = exception.code;
       message = exception.message;
       details = exception.details;
+    } else if (isZodError(exception)) {
+      // Controllers validate query strings with `schema.parse()`, which throws
+      // a bare ZodError. Without this branch a mistyped `?sort=` came back as
+      // 500 INTERNAL_ERROR: the wrong status for the client, and — worse —
+      // ordinary client mistakes logged as server errors, which is exactly the
+      // noise §24.20's "no open P0/P1" depends on not existing.
+      status = HttpStatus.BAD_REQUEST;
+      code = 'VALIDATION_ERROR';
+      message = 'Gönderdiğin bilgilerde hata var.';
+      details = exception.issues.map((issue) => ({
+        path: issue.path.join('.'),
+        code: issue.code,
+        message: issue.message,
+      }));
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       code = mapStatusToCode(status);
@@ -104,6 +119,24 @@ export class ApiExceptionFilter implements ExceptionFilter {
 
     response.status(status).json(payload);
   }
+}
+
+/**
+ * `instanceof ZodError` is not reliable here.
+ *
+ * The schemas live in `@only-horses/shared-types`, which resolves zod's ESM
+ * build, while this file is compiled to CommonJS and resolves the CJS build.
+ * Same version, same package, two distinct class objects — so the prototype
+ * check silently failed and every validation error was still answered with a
+ * 500. Structural identification is what actually holds across that seam.
+ */
+function isZodError(exception: unknown): exception is ZodError {
+  return (
+    exception instanceof ZodError ||
+    (exception instanceof Error &&
+      exception.name === 'ZodError' &&
+      Array.isArray((exception as { issues?: unknown }).issues))
+  );
 }
 
 function mapStatusToCode(status: number): ErrorCode {

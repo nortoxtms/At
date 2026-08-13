@@ -18,6 +18,30 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
+/**
+ * Only the GitHub Pages build sets this (docs/PREVIEW.md), and it is the only
+ * context where an unreachable API is expected rather than an incident.
+ */
+const IS_STATIC_PREVIEW = process.env.NEXT_PUBLIC_STATIC_PREVIEW === '1';
+
+/**
+ * What to do when the API cannot be reached.
+ *
+ * In the static preview: return the empty value, so a page that has an empty
+ * state renders it. Everywhere else: rethrow.
+ *
+ * The rethrow matters more than it looks. Swallowing the error here meant the
+ * sitemap — which enumerates listings from the live index — was generated
+ * empty and then cached for an hour, telling crawlers the site had no listings
+ * at all. A thrown error instead leaves ISR serving the last good copy, which
+ * is the right answer for a brief API blip and a visible one for a real
+ * outage.
+ */
+function onUnreachable<T>(error: unknown, fallback: T): T {
+  if (IS_STATIC_PREVIEW) return fallback;
+  throw error;
+}
+
 export interface ListingDetail {
   id: string;
   slug: string;
@@ -78,16 +102,14 @@ async function get<T>(path: string, revalidate: number): Promise<T | null> {
       headers: { accept: 'application/json' },
     });
 
+    // A 404 is an answer: the thing is not there. That is a null in every
+    // build, preview or not.
     if (!response.ok) return null;
 
     const body = (await response.json()) as { data: T };
     return body.data;
-  } catch {
-    // An unreachable API is a null, not a crash. It happens in exactly two
-    // situations that both want a rendered empty state rather than a 500: the
-    // static preview build (docs/PREVIEW.md), and an API deploy that briefly
-    // drops connections while the page cache is warm.
-    return null;
+  } catch (error) {
+    return onUnreachable(error, null);
   }
 }
 
@@ -121,8 +143,8 @@ export async function searchListings(
     };
 
     return { hits: body.data, total: body.meta.total };
-  } catch {
-    return { hits: [], total: 0 };
+  } catch (error) {
+    return onUnreachable(error, { hits: [], total: 0 });
   }
 }
 
@@ -271,10 +293,8 @@ async function search<THit>(
 
     const body = (await response.json()) as { data: THit[]; meta: { total: number } };
     return { hits: body.data, total: body.meta.total };
-  } catch {
-    // Same reasoning as `get`: the empty state is already written and says
-    // something useful, which beats a build failure or a 500.
-    return { hits: [], total: 0 };
+  } catch (error) {
+    return onUnreachable(error, { hits: [], total: 0 });
   }
 }
 

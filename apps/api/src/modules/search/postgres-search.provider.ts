@@ -28,10 +28,51 @@ import type { ListingDocument, SearchDocument, SearchProvider } from './search.p
  * are all exercised without a Typesense instance.
  *
  * What it does not reproduce is Typesense's typo tolerance and its `_text_match`
- * relevance; full-text here is a trigram match on title and horse name, which
- * is close enough to develop against and explicitly not the production
- * behaviour.
+ * relevance; full-text here is a prefix match against the `text_search` vector
+ * (migration 0053), which is close enough to develop against and explicitly
+ * not the production behaviour.
  */
+
+/**
+ * Turns what a person typed into a tsquery.
+ *
+ * Every token becomes a prefix term, so "kısr" finds "kısrak" and a search box
+ * stays useful before the word is finished. Tokens are joined with AND: typing
+ * more words should narrow the result, never widen it.
+ *
+ * The input is stripped of everything that is not a letter, digit, space or
+ * internal hyphen rather than escaped. `to_tsquery` has an operator syntax —
+ * `&`, `|`, `!`, `<->`, `:`, parentheses — and a user who types "at & !pony"
+ * is not writing a query language, they are searching for a string; letting
+ * that reach the parser produces a syntax error at best and, because `!` is
+ * negation, the exact opposite of what they asked for at worst.
+ *
+ * Hyphens survive because Postgres keeps them: `to_tsvector('simple',
+ * 'M5-1755070000')` yields `'m5'` and `'-1755070000'`, so a query that had
+ * split on the hyphen would fail to match the very text it came from.
+ */
+function toPrefixQuery(raw: string): string {
+  const tokens = raw
+    .replace(/[^\p{L}\p{N}\s-]+/gu, ' ')
+    .split(/\s+/)
+    // A leading or trailing hyphen is an operator fragment, not part of a word.
+    .map((token) => token.replace(/^-+|-+$/g, ''))
+    .filter(Boolean)
+    .slice(0, 10);
+
+  // No usable token — "&&&", or a lone space — must match nothing rather than
+  // everything. An empty tsquery would drop the filter and return the corpus,
+  // and a negation-based sentinel would do the same thing more cleverly:
+  // `!!!__no_match__` parses as a triple negation, which matches every row.
+  if (tokens.length === 0) return 'zzznomatchzzz';
+
+  return tokens.map((token) => `${token}:*`).join(' & ');
+}
+
+/** `to_tsquery` with the same configuration the stored vector was built with. */
+function textQuery(placeholder: string): string {
+  return `to_tsquery('simple', ${placeholder})`;
+}
 @Injectable()
 export class PostgresSearchProvider implements SearchProvider {
   readonly name = 'postgres';
@@ -110,7 +151,13 @@ export class PostgresSearchProvider implements SearchProvider {
           Math.floor((query.limit * BOOSTED_PER_PAGE) / 20) || BOOSTED_PER_PAGE,
         );
 
-    const rows = await this.db.query<{ document: ListingDocument; distance_km: number | null; total: string }>(
+    // The page and the facet counts are independent questions about the same
+    // filter, and `db.query` takes its own pooled connection per call — so they
+    // are asked at the same time. Awaited in sequence this cost the sum of the
+    // two; the facet pass over a broad filter is the larger half, and waiting
+    // for the page first bought nothing.
+    const [rows, facets] = await Promise.all([
+      this.db.query<{ document: ListingDocument; distance_km: number | null; total: string }>(
       `WITH filtered AS (
          SELECT document, ${this.distanceExpression(query, params)} AS distance_km,
                 (document->>'boost_rank')::int AS boost_rank
@@ -140,10 +187,10 @@ export class PostgresSearchProvider implements SearchProvider {
        ) merged
        ORDER BY tier, ${orderBy}
        LIMIT ${query.limit}`,
-      params,
-    );
-
-    const facets = await this.buildFacets(where, filterParams);
+        params,
+      ),
+      this.buildFacets(where, filterParams),
+    ]);
 
     return {
       hits: rows.map((row) => toHit(row.document, row.distance_km)),
@@ -160,8 +207,7 @@ export class PostgresSearchProvider implements SearchProvider {
     const clauses = new ClauseBuilder();
 
     if (query.q) {
-      const term = clauses.bind(`%${query.q}%`);
-      clauses.push(`(document->>'title' ILIKE ${term} OR document->>'description' ILIKE ${term})`);
+      clauses.push(`text_search @@ ${textQuery(clauses.bind(toPrefixQuery(query.q)))}`);
     }
     if (query.categories?.length) {
       clauses.push(`document->>'category' = ANY(${clauses.bind(query.categories)})`);
@@ -253,10 +299,7 @@ export class PostgresSearchProvider implements SearchProvider {
     const clauses = new ClauseBuilder();
 
     if (query.q) {
-      const term = clauses.bind(`%${query.q}%`);
-      clauses.push(
-        `(document->>'title' ILIKE ${term} OR document->>'description' ILIKE ${term} OR document->>'organization_name' ILIKE ${term})`,
-      );
+      clauses.push(`text_search @@ ${textQuery(clauses.bind(toPrefixQuery(query.q)))}`);
     }
     this.pushLocation(clauses, query);
 
@@ -342,10 +385,7 @@ export class PostgresSearchProvider implements SearchProvider {
     const clauses = new ClauseBuilder();
 
     if (query.q) {
-      const term = clauses.bind(`%${query.q}%`);
-      clauses.push(
-        `(document->>'display_name' ILIKE ${term} OR document->>'headline' ILIKE ${term})`,
-      );
+      clauses.push(`text_search @@ ${textQuery(clauses.bind(toPrefixQuery(query.q)))}`);
     }
     this.pushLocation(clauses, query);
 
@@ -521,8 +561,7 @@ export class PostgresSearchProvider implements SearchProvider {
     };
 
     if (query.q) {
-      const term = push(`%${query.q}%`);
-      clauses.push(`(document->>'title' ILIKE ${term} OR document->>'horse_name' ILIKE ${term})`);
+      clauses.push(`text_search @@ ${textQuery(push(toPrefixQuery(query.q)))}`);
     }
 
     if (query.countryCode) clauses.push(`document->>'country_code' = ${push(query.countryCode)}`);
@@ -638,24 +677,50 @@ export class PostgresSearchProvider implements SearchProvider {
     }
   }
 
-  /** Facet counts for the §18.2 S07 sheet's active-count badges. */
+  /**
+   * Facet counts for the §18.2 S07 sheet's active-count badges.
+   *
+   * One query, not six. This used to loop the fields and issue a separate
+   * aggregate per field, which meant a single search request scanned the
+   * matching set six times over six round trips. Against §24.16's 50 000-row
+   * corpus that was the dominant cost of a search — more than the search
+   * itself. Unrolling the fields into a lateral VALUES list groups them all in
+   * one pass, and `row_number()` keeps each field's own top 30.
+   */
   private async buildFacets(
     where: string,
     params: unknown[],
   ): Promise<Record<string, { value: string; count: number }[]>> {
     const facetFields = ['listing_type', 'breed', 'sex', 'country_code', 'region', 'color'];
-    const facets: Record<string, { value: string; count: number }[]> = {};
+    const values = facetFields
+      .map((field) => `('${field}', document->>'${field}')`)
+      .join(', ');
 
-    for (const field of facetFields) {
-      const rows = await this.db.query<{ value: string; count: string }>(
-        `SELECT document->>'${field}' AS value, count(*)::text AS count
-         FROM search_documents
-         WHERE collection = 'listings' AND ${where} AND document->>'${field}' <> ''
-         GROUP BY 1 ORDER BY count(*) DESC LIMIT 30`,
-        params,
-      );
+    const rows = await this.db.query<{ field: string; value: string; count: string }>(
+      `SELECT field, value, count::text
+         FROM (
+           SELECT facet.field,
+                  facet.value,
+                  count(*) AS count,
+                  row_number() OVER (PARTITION BY facet.field ORDER BY count(*) DESC) AS rank
+             FROM search_documents,
+                  LATERAL (VALUES ${values}) AS facet(field, value)
+            WHERE collection = 'listings' AND ${where}
+              AND facet.value IS NOT NULL AND facet.value <> ''
+            GROUP BY facet.field, facet.value
+         ) ranked
+        WHERE rank <= 30
+        ORDER BY field, count DESC`,
+      params,
+    );
 
-      facets[field] = rows.map((row) => ({ value: row.value, count: Number(row.count) }));
+    // Every field appears in the response even when nothing matched it, so the
+    // client renders an empty facet group rather than dropping the control.
+    const facets: Record<string, { value: string; count: number }[]> = Object.fromEntries(
+      facetFields.map((field) => [field, []]),
+    );
+    for (const row of rows) {
+      facets[row.field]?.push({ value: row.value, count: Number(row.count) });
     }
 
     return facets;

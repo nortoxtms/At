@@ -320,11 +320,19 @@ export class ListingsService {
 
     await this.db.withUser(profileId, (client) =>
       client.query(
+        // Every use of $2 is cast. Postgres infers a parameter's type from how
+        // it is used, and this used $2 twice — once assigned to a
+        // `listing_status` column and once compared to a string literal — so
+        // it deduced two incompatible types and refused the statement outright
+        // with "inconsistent types deduced for parameter $2". Every transition
+        // routed through here (pause, resume, renew, mark under offer) failed
+        // at runtime; nothing caught it because the milestone runs exercise the
+        // downgrade path's `pause_listings()` function, not this endpoint.
         `UPDATE listings
-         SET status = $2,
-             under_offer_since = CASE WHEN $2 = 'under_offer' THEN now() ELSE NULL END,
-             expires_at = CASE WHEN $3 THEN now() + ($4 || ' days')::interval ELSE expires_at END
-         WHERE id = $1`,
+         SET status = $2::listing_status,
+             under_offer_since = CASE WHEN $2::listing_status = 'under_offer' THEN now() ELSE NULL END,
+             expires_at = CASE WHEN $3::boolean THEN now() + ($4 || ' days')::interval ELSE expires_at END
+         WHERE id = $1::uuid`,
         [listingId, target, action === 'renew', LISTING_TTL_DAYS],
       ),
     );

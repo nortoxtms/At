@@ -48,9 +48,14 @@ Other known gaps, stated plainly:
   against Stripe test mode before launch.
 
 What does exist and is verified: the API (139 routes), the database and its
-RLS, the business rules, and a public web app — the marketing pages, the
-listing/service/job indexes and detail pages, pricing, and the policy pages.
-The web app has no authenticated screens.
+RLS, the business rules, and the web app — the marketing pages, the
+listing/service/job indexes and detail pages, pricing, the policy pages, and
+signed-in screens for your account, horses, listings and messages. Session
+tokens are httpOnly cookies, so no token is reachable from script.
+
+The signed-in web screens cover the §18.2 flows that are pure management.
+Creating a horse, uploading media and composing a listing are still API-only —
+those forms exist in no client.
 
 ## Stack
 

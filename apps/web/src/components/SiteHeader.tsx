@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { readSession } from '@/lib/session';
+
 /**
  * The site header — §19.1's navigation.
  *
@@ -30,7 +32,12 @@ const PREVIEW_SECTIONS =
     ? [{ href: '/tr/ilan-ver', label: 'İlan ver' }]
     : [];
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  // The static preview has no server and no session; asking for one there
+  // would be asking a cookie jar that does not exist.
+  const signedIn =
+    process.env.NEXT_PUBLIC_STATIC_PREVIEW === '1' ? false : Boolean(await readSession());
+
   return (
     <header className="border-b border-border bg-paper">
       <nav
@@ -51,12 +58,28 @@ export function SiteHeader() {
           ))}
         </ul>
 
-        <Link
-          href="/tr/atlar"
-          className="ml-auto rounded-md bg-ink px-4 py-2 text-small text-text-inverse"
-        >
-          Atlara bak
-        </Link>
+        <div className="ml-auto flex items-center gap-3 text-small">
+          {signedIn ? (
+            <Link
+              href="/tr/hesap"
+              className="rounded-md bg-ink px-4 py-2 text-text-inverse"
+            >
+              Hesabım
+            </Link>
+          ) : (
+            <>
+              <Link href="/tr/giris" className="text-text-secondary hover:text-brass-text">
+                Giriş
+              </Link>
+              <Link
+                href="/tr/kayit"
+                className="rounded-md bg-ink px-4 py-2 text-text-inverse"
+              >
+                Hesap oluştur
+              </Link>
+            </>
+          )}
+        </div>
       </nav>
     </header>
   );

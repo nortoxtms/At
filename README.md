@@ -24,13 +24,15 @@ Each milestone's Definition of Done (§23) has an executable check —
 | **M2 — Listings & search** | Done · `scripts/m2-acceptance.sh` |
 | **M3 — Trust & messaging** | Done · `scripts/m3-acceptance.sh` |
 | **M4 — Services, jobs, reviews** | Done · `scripts/m4-acceptance.sh` |
-| M5 — Monetization | Not started |
+| **M5 — Monetization** | Done · `scripts/m5-acceptance.sh` |
 | M6 — Polish & launch | Not started |
 
 Known gaps, stated plainly: the Typesense adapter has never been run
-(ADR-0005, ADR-0006) and the measured search numbers are Postgres's; the mobile
-app has never been built on iOS or Android in this environment, so only its
-types are verified; §24.16's 50k-listing search target is unmeasured.
+(ADR-0005, ADR-0006) and the measured search numbers are Postgres's; the Stripe
+adapter has never been run either (ADR-0007) and needs one pass against Stripe
+test mode before launch; the mobile app has never been built on iOS or Android
+in this environment, so only its types are verified; §24.16's 50k-listing
+search target is unmeasured.
 
 ## Stack
 

@@ -6,6 +6,7 @@ export * from './quality-score.js';
 export * from './listing-lifecycle.js';
 export * from './horse.js';
 export * from './listing.js';
+export * from './billing.js';
 export * from './service.js';
 export * from './job.js';
 export * from './review.js';

@@ -38,6 +38,7 @@ export const ROUTES = {
 
   verification: '/verification', // S26
   paywall: '/paywall', // S27
+  boost: (listingId: string) => `/listings/${listingId}/boost`, // S28
   saved: '/saved', // S29
   notifications: '/notifications', // S30
   settings: '/settings', // S31

@@ -9,7 +9,11 @@ import { AppModule } from './app.module.js';
 import type { Env } from './config/env.js';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // rawBody keeps the untouched request buffer alongside the parsed body.
+  // §16.2's webhook signatures are computed over the bytes Stripe sent, and
+  // parsing to JSON then re-serializing changes key order and whitespace —
+  // the classic "verifies in test, 400s in production" webhook bug.
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   const config = app.get(ConfigService<Env, true>);
   const logger = new Logger('Bootstrap');
 
@@ -25,9 +29,6 @@ async function bootstrap(): Promise<void> {
     exposedHeaders: ['X-Request-Id', 'Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
   });
 
-  // Stripe and Mux webhooks verify signatures over the raw body (§16.2), so
-  // the JSON parser must not be the only thing that touches it. Registered
-  // when the billing module lands in M5.
 
   const port = config.get('PORT', { infer: true });
   await app.listen(port, '0.0.0.0');

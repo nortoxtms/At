@@ -180,71 +180,35 @@ export class VerificationService {
     verificationId: string,
     decision: { status: 'approved' | 'rejected'; reviewerId: string | null; note?: string },
   ): Promise<{ profileId: string; level: VerificationLevel | null }> {
+    if (!decision.reviewerId) {
+      // §14.1: a manual rung is decided by a person, and the function records
+      // which one. The identity rung has no reviewer and does not come here.
+      throw ApiException.forbidden('Doğrulama kararı için moderatör kimliği gerekiyor.');
+    }
+
+    // system: routed through a SECURITY DEFINER function (migration 0045).
+    // `verifications` has a SELECT policy and no UPDATE policy, so the direct
+    // update this method used to perform matched zero rows and reported
+    // success — an approved badge that changed nothing.
     const rows = await this.db.query<{
-      id: string;
       profile_id: string;
       kind: VerificationKind;
-      horse_id: string | null;
-      organization_id: string | null;
-      status: string;
-    }>(
-      `SELECT id, profile_id, kind, horse_id, organization_id, status
-       FROM verifications WHERE id = $1`,
-      [verificationId],
-    );
+      level: VerificationLevel | null;
+    }>(`SELECT * FROM decide_verification($1, $2, $3, $4)`, [
+      verificationId,
+      decision.reviewerId,
+      decision.status,
+      decision.note ?? null,
+    ]);
 
-    const verification = rows[0];
-    if (!verification) throw ApiException.notFound('Doğrulama');
-    if (verification.status !== 'pending') {
-      throw ApiException.validation('Bu doğrulama zaten karara bağlanmış.');
-    }
+    const result = rows[0];
+    // No row means the verification was missing or already decided; both are
+    // the caller's mistake rather than a silent success.
+    if (!result) throw ApiException.notFound('Doğrulama');
 
-    await this.db.query(
-      `UPDATE verifications
-       SET status = $2, reviewer_id = $3, reviewer_note = $4, decided_at = now()
-       WHERE id = $1`,
-      [verificationId, decision.status, decision.reviewerId, decision.note ?? null],
-    );
+    this.logger.log(`Verification ${result.kind} ${decision.status} for ${result.profile_id}`);
 
-    if (decision.status !== 'approved') {
-      return { profileId: verification.profile_id, level: null };
-    }
-
-    const level = LEVEL_FOR_KIND[verification.kind] ?? null;
-
-    if (level) {
-      // Raise only — approving a professional badge must not demote someone
-      // who is already business verified.
-      await this.db.query(
-        `UPDATE profiles
-         SET verification_level = $2::verification_level
-         WHERE id = $1
-           AND array_position($3::verification_level[], verification_level)
-               < array_position($3::verification_level[], $2::verification_level)`,
-        [verification.profile_id, level, LEVEL_ORDER],
-      );
-    }
-
-    if (verification.kind === 'horse_ownership' && verification.horse_id) {
-      await this.db.query(`UPDATE horses SET ownership_verified_at = now() WHERE id = $1`, [
-        verification.horse_id,
-      ]);
-    }
-
-    if (verification.kind === 'business' && verification.organization_id) {
-      await this.db.query(
-        `UPDATE organizations SET verification_level = 'business_verified' WHERE id = $1`,
-        [verification.organization_id],
-      );
-    }
-
-    // §13.3: verification is worth up to 50 of the 100 trust points, so the
-    // score is refreshed immediately rather than waiting for the nightly job.
-    await this.db.query(`SELECT refresh_trust_score($1)`, [verification.profile_id]);
-
-    this.logger.log(`Verification ${verification.kind} approved for ${verification.profile_id}`);
-
-    return { profileId: verification.profile_id, level };
+    return { profileId: result.profile_id, level: result.level };
   }
 
   /** §12 GET /admin/verifications/queue. */

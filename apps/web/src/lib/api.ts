@@ -1,5 +1,7 @@
 import type {
   JobSearchHit,
+  PlanFeature,
+  PlanOption,
   ListingSearchHit,
   ProfessionalSearchHit,
   ServiceSearchHit,
@@ -324,4 +326,21 @@ export function formatSalary(job: {
 
   const period = job.salary_period ? `/${SALARY_PERIOD_LABEL_TR[job.salary_period]}` : '';
   return `${range}${period}`;
+}
+
+// ── M5: the §16.1 plan catalogue ───────────────────────────────────────
+
+export interface PlanCatalogue {
+  plans: PlanOption[];
+  features: PlanFeature[];
+  products: Record<string, { key: string; amountEur: number; interval?: string; durationDays?: number }>;
+}
+
+/**
+ * §16.1: "Prices are configurable; do not hardcode in UI." So the pricing page
+ * asks the API rather than restating the numbers — one place to change, and no
+ * page that can disagree with what Stripe charges.
+ */
+export function getPlans(): Promise<PlanCatalogue | null> {
+  return get<PlanCatalogue>('/billing/plans', 3600);
 }

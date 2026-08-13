@@ -14,7 +14,8 @@ import { NotificationsService } from '../modules/notifications/notifications.ser
  *
  *   · §13.6 — applications auto-close when their job expires;
  *   · §2    — health file grants are time-limited, so they must actually end;
- *   · §17   — `review.prompt`, 48 h after a listing closed.
+ *   · §17   — `review.prompt`, 48 h after a listing closed;
+ *   · §16.1 — boosts are sold by the day, so they have to stop.
  *
  * The grant sweep existed since M3 with no caller, which meant "time-limited"
  * was true in the database and decorative in practice. It has one now.
@@ -35,15 +36,16 @@ export class MarketplaceSweepsJob {
     closedApplications: number;
     expiredGrants: number;
     reviewPrompts: number;
+    expiredBoosts: number;
   }> {
-    const [jobs, expiredGrants, reviewPrompts] = [
-      await this.jobs.closeExpiredJobs(),
-      await this.grants.expireLapsed(),
-      await this.promptForReviews(),
-    ];
+    const jobs = await this.jobs.closeExpiredJobs();
+    const expiredGrants = await this.grants.expireLapsed();
+    const reviewPrompts = await this.promptForReviews();
+    const expiredBoosts = await this.expireBoosts();
 
     this.logger.log(
-      `Sweep: ${jobs.applications} application(s), ${expiredGrants} grant(s), ${reviewPrompts} review prompt(s)`,
+      `Sweep: ${jobs.applications} application(s), ${expiredGrants} grant(s), ` +
+        `${reviewPrompts} review prompt(s), ${expiredBoosts} boost(s)`,
     );
 
     return {
@@ -51,7 +53,21 @@ export class MarketplaceSweepsJob {
       closedApplications: jobs.applications,
       expiredGrants,
       reviewPrompts,
+      expiredBoosts,
     };
+  }
+
+  /**
+   * §16.1's boosts are sold by duration, so they have to end.
+   *
+   * §11.2 already refuses to rank an expired boost — `boost_rank` is computed
+   * from `boost_expires_at` at index time — so this is about the flag the
+   * seller sees on their own listing and about the document staying truthful.
+   * Clearing it re-enqueues the listing through the §11.4 outbox by itself.
+   */
+  private async expireBoosts(): Promise<number> {
+    const rows = await this.db.query<{ expire_boosts: number }>(`SELECT expire_boosts()`);
+    return Number(rows[0]?.expire_boosts ?? 0);
   }
 
   /** §17 `review.prompt`, push only — the spec lists no other channel. */

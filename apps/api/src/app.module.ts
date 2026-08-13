@@ -21,6 +21,7 @@ import { ListingsModule } from './modules/listings/listings.module.js';
 import { ServicesModule } from './modules/services/services.module.js';
 import { JobBoardModule } from './modules/jobs/jobs.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
+import { BillingModule } from './modules/billing/billing.module.js';
 import { MediaModule } from './modules/media/media.module.js';
 import { SearchModule } from './modules/search/search.module.js';
 import { ProfilesModule } from './modules/profiles/profiles.module.js';
@@ -58,6 +59,7 @@ import { ReferenceModule } from './modules/reference/reference.module.js';
     ServicesModule,
     JobBoardModule,
     ReviewsModule,
+    BillingModule,
     VerificationModule,
     AccessGrantsModule,
     ModerationModule,

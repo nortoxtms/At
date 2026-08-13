@@ -10,6 +10,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware.j
 import { JobsModule } from './jobs/jobs.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { AccessGrantsModule } from './modules/access-grants/access-grants.module.js';
+import { MessagingModule } from './modules/messaging/messaging.module.js';
 import { ModerationModule } from './modules/moderation/moderation.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { VerificationModule } from './modules/verification/verification.module.js';
@@ -50,6 +51,7 @@ import { ReferenceModule } from './modules/reference/reference.module.js';
     VerificationModule,
     AccessGrantsModule,
     ModerationModule,
+    MessagingModule,
     ReferenceModule,
     HealthModule,
     JobsModule,

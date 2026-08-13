@@ -75,7 +75,16 @@ export class AccessGrantsService {
                message = COALESCE(EXCLUDED.message, horse_access_grants.message),
                requested_at = CASE
                  WHEN horse_access_grants.status IN ('denied','revoked','expired')
-                 THEN now() ELSE horse_access_grants.requested_at END
+                 THEN now() ELSE horse_access_grants.requested_at END,
+               -- Re-asking clears the previous answer; grants_reopen
+               -- (migration 0035) requires it, and carrying a stale decision
+               -- forward would make a fresh request look already-handled.
+               decided_at = CASE
+                 WHEN horse_access_grants.status IN ('denied','revoked','expired')
+                 THEN NULL ELSE horse_access_grants.decided_at END,
+               expires_at = CASE
+                 WHEN horse_access_grants.status IN ('denied','revoked','expired')
+                 THEN NULL ELSE horse_access_grants.expires_at END
          RETURNING id, status`,
         [horse.id, profileId, input.scope ?? ['health'], input.message ?? null],
       );

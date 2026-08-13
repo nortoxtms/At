@@ -295,4 +295,84 @@ DROP=$((BEFORE_SCORE - AFTER_SCORE))
 [ "$DROP" = "25" ] || fail "trust fell by $DROP; §13.3 says 20 penalty + 5 forfeited clean record"
 pass "trust score fell from $BEFORE_SCORE to $AFTER_SCORE (−$DROP, as §13.3 specifies)"
 
+# ── §15 messaging ──────────────────────────────────────────────────────
+say "6. §15 — conversations carry context"
+
+CONV=$(curl -sS -X POST "$API/v1/conversations" -H "authorization: Bearer $BUYER" \
+  -H 'content-type: application/json' \
+  -d "{\"contextType\":\"listing\",\"contextId\":\"$LISTING_ID\",\"participantId\":\"$SELLER_ID\",
+       \"firstMessage\":\"Merhaba, at hâlâ satılık mı? Hafta sonu görmeye gelebilir miyim?\"}")
+CONV_ID=$(echo "$CONV" | json "d.get('data',{}).get('conversationId','')")
+[ -n "$CONV_ID" ] || fail "conversation not created: $CONV"
+pass "buyer opened a listing conversation — $CONV_ID"
+
+# §15.1: the context is pinned as a card and sent as the first system message.
+MSGS=$(curl -sS "$API/v1/conversations/$CONV_ID" -H "authorization: Bearer $BUYER")
+echo "$MSGS" | python3 -c "
+import json,sys
+msgs = json.load(sys.stdin)['data']
+system = [m for m in msgs if m['is_system']]
+assert system, 'no system message pinning the context'
+card = system[0]['attachment']
+assert card and card['type'] == 'context_card', f'first system message is not a context card: {card}'
+print(f\"  context card: {card['payload']['title']}\")"
+pass "the thread opens with a pinned context card"
+
+# §15.1: the first buyer message creates an inquiries row.
+INQ=$(psql "$DB" -At -c "SELECT count(*) FROM inquiries WHERE conversation_id = '$CONV_ID'")
+[ "$INQ" = "1" ] || fail "no inquiry row was created (found $INQ)"
+pass "an inquiry row was created"
+
+# §13.5: the seller's first reply is what response rate is measured from.
+curl -sS -X POST "$API/v1/conversations/$CONV_ID/messages" -H "authorization: Bearer $SELLER" \
+  -H 'content-type: application/json' \
+  -d '{"body":"Merhaba, evet satılık. Cumartesi uygun."}' >/dev/null
+REPLIED=$(psql "$DB" -At -c "SELECT first_reply_at IS NOT NULL FROM inquiries WHERE conversation_id = '$CONV_ID'")
+[ "$REPLIED" = "t" ] || fail "the seller reply did not stamp first_reply_at"
+pass "the seller's first reply is timestamped for §13.5"
+
+say "7. §14.3 — off-platform payment language is caught"
+WARNED=$(curl -sS -X POST "$API/v1/conversations/$CONV_ID/messages" -H "authorization: Bearer $SELLER" \
+  -H 'content-type: application/json' \
+  -d '{"body":"Kapora olarak western union ile 2000 EUR gönderirsen atı ayırayım."}' \
+  | json "d['data']['paymentWarning']")
+[ "$WARNED" = "True" ] || fail "off-platform payment language was not flagged"
+pass "the message is flagged and the buyer is warned inline"
+
+FLAGGED=$(psql "$DB" -At -c "
+  SELECT count(*) FROM moderation_cases
+  WHERE target_id = '$CONV_ID' AND signals->>'offsite_payment_language' = 'true'")
+[ "$FLAGGED" = "1" ] || fail "the thread was not flagged for review"
+pass "the thread is in the moderation queue"
+
+CLEAN=$(curl -sS -X POST "$API/v1/conversations/$CONV_ID/messages" -H "authorization: Bearer $BUYER" \
+  -H 'content-type: application/json' \
+  -d '{"body":"Cumartesi 14:00 uygun mu? Veteriner muayenesini de ayarlayabilirim."}' \
+  | json "d['data']['paymentWarning']")
+[ "$CLEAN" = "False" ] || fail "an ordinary message was flagged"
+pass "an ordinary message is not flagged"
+
+say "8. §15.1 — a quick action does the thing, not just says it"
+QA=$(curl -sS -X POST "$API/v1/conversations/$CONV_ID/quick-action" -H "authorization: Bearer $BUYER" \
+  -H 'content-type: application/json' \
+  -d '{"action":"request_health","payload":{"message":"Sağlık dosyasını görebilir miyim?"}}')
+GRANT2=$(echo "$QA" | json "d['data']['result'].get('id','')")
+[ -n "$GRANT2" ] || fail "request_health did not create an access request: $QA"
+pass "\"Sağlık dosyası iste\" created a real access request from inside the thread"
+
+say "9. §24.13 — blocking freezes the thread"
+curl -sS -X POST "$API/v1/blocks" -H "authorization: Bearer $BUYER" \
+  -H 'content-type: application/json' -d "{\"profileId\":\"$SELLER_ID\"}" >/dev/null
+BLOCKED_SEND=$(curl -sS -X POST "$API/v1/conversations/$CONV_ID/messages" -H "authorization: Bearer $BUYER" \
+  -H 'content-type: application/json' -d '{"body":"test"}' | json "d.get('error',{}).get('code','')")
+[ "$BLOCKED_SEND" = "FORBIDDEN" ] || fail "the blocker could still post (got '$BLOCKED_SEND')"
+pass "the thread is read-only after a block"
+
+NEW_THREAD=$(curl -sS -X POST "$API/v1/conversations" -H "authorization: Bearer $SELLER" \
+  -H 'content-type: application/json' \
+  -d "{\"contextType\":\"direct\",\"participantId\":\"$BUYER_ID\",\"firstMessage\":\"tekrar\"}" \
+  | json "d.get('error',{}).get('code','')")
+[ "$NEW_THREAD" = "FORBIDDEN" ] || fail "a blocked user opened a new conversation (got '$NEW_THREAD')"
+pass "a blocked user cannot open a new conversation either"
+
 printf '\n\033[32m✓ M3 acceptance complete\033[0m\n'

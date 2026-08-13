@@ -92,12 +92,27 @@ export class AdminModerationController {
     @CurrentProfileId() moderatorId: string,
     @Query('status') status?: string,
     @Query('severity') severity?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
+    const result = await this.moderation.queue(moderatorId, {
+      status,
+      severity: severity ? Number(severity) : undefined,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+
     return {
-      data: await this.moderation.queue(moderatorId, {
-        status,
-        severity: severity ? Number(severity) : undefined,
-      }),
+      data: result.cases,
+      // `total` is the part that matters operationally: a moderator seeing 50
+      // cases needs to know whether that is the whole queue or the visible tip
+      // of six hundred.
+      meta: {
+        page: result.page,
+        limit: result.limit,
+        total: result.total,
+        hasMore: result.page * result.limit < result.total,
+      },
     };
   }
 

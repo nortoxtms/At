@@ -220,9 +220,15 @@ DENIED=$(curl -sS -o /dev/null -w '%{http_code}' "$API/v1/admin/moderation/queue
 [ "$DENIED" = "404" ] || fail "a non-moderator got HTTP $DENIED on the admin queue"
 pass "the admin queue is invisible to ordinary users"
 
-QUEUE=$(curl -sS "$API/v1/admin/moderation/queue?status=open" -H "authorization: Bearer $MODERATOR")
+# Paged explicitly. The queue orders by severity then oldest-first, so on a
+# database with a backlog the case this run just created is the last one — and
+# with the old unpaginated endpoint it was not merely on a later page, there
+# was no later page. Asking for the whole queue is what makes this assertion
+# about the case rather than about how many fixtures previous runs left behind.
+QUEUE=$(curl -sS "$API/v1/admin/moderation/queue?status=open&limit=200" -H "authorization: Bearer $MODERATOR")
+TOTAL=$(echo "$QUEUE" | json "d['meta']['total']")
 FOUND=$(echo "$QUEUE" | json "sum(1 for c in d['data'] if c['target_id']=='$STOLEN')")
-[ "$FOUND" = "1" ] || fail "the phash case is not in the moderator's queue"
+[ "$FOUND" = "1" ] || fail "the phash case is not in the moderator's queue (queue reports $TOTAL open)"
 SEVERITIES=$(echo "$QUEUE" | json "[c['severity'] for c in d['data']][:5]")
 pass "case present; queue ordered by severity $SEVERITIES"
 

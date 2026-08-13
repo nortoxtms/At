@@ -139,25 +139,51 @@ export class ModerationService {
    */
   async queue(
     moderatorId: string,
-    filters: { status?: string; severity?: number; limit?: number },
-  ): Promise<unknown[]> {
-    return this.db.queryAs(
-      moderatorId,
-      `SELECT c.id, c.target_type, c.target_id, c.status, c.severity, c.signals,
-              c.report_ids, c.created_at, c.assigned_to, c.subject_profile_id,
-              p.handle AS subject_handle, p.display_name AS subject_name,
-              p.trust_score AS subject_trust_score,
-              cardinality(c.report_ids) AS report_count
-       FROM moderation_cases c
-       LEFT JOIN profiles p ON p.id = c.subject_profile_id
-       WHERE ($1::moderation_status IS NULL OR c.status = $1)
-         AND ($2::int IS NULL OR c.severity >= $2)
-       -- Severity first: a queue ordered by arrival buries the scam report
-       -- behind fifty wrong-category ones.
-       ORDER BY c.severity DESC, c.created_at
-       LIMIT $3`,
-      [filters.status ?? 'open', filters.severity ?? null, filters.limit ?? 50],
-    );
+    filters: { status?: string; severity?: number; page?: number; limit?: number },
+  ): Promise<{ cases: unknown[]; page: number; limit: number; total: number }> {
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
+    const page = Math.max(filters.page ?? 1, 1);
+    const offset = (page - 1) * limit;
+
+    const params = [filters.status ?? 'open', filters.severity ?? null];
+
+    // Paginated, and it says how many there are.
+    //
+    // This used to be a bare `LIMIT 50` with no offset and no total. Past
+    // fifty open cases the rest were not merely off the first page — there was
+    // no second page, so they were unreachable through the API and a moderator
+    // had no way to know they existed. The ordering made it worse: severity
+    // first, then oldest, so a backlog of high-severity cases hid every newer
+    // one behind it indefinitely.
+    const [cases, counted] = await Promise.all([
+      this.db.queryAs<Record<string, unknown>>(
+        moderatorId,
+        `SELECT c.id, c.target_type, c.target_id, c.status, c.severity, c.signals,
+                c.report_ids, c.created_at, c.assigned_to, c.subject_profile_id,
+                p.handle AS subject_handle, p.display_name AS subject_name,
+                p.trust_score AS subject_trust_score,
+                cardinality(c.report_ids) AS report_count
+         FROM moderation_cases c
+         LEFT JOIN profiles p ON p.id = c.subject_profile_id
+         WHERE ($1::moderation_status IS NULL OR c.status = $1)
+           AND ($2::int IS NULL OR c.severity >= $2)
+         -- Severity first: a queue ordered by arrival buries the scam report
+         -- behind fifty wrong-category ones.
+         ORDER BY c.severity DESC, c.created_at
+         LIMIT $3 OFFSET $4`,
+        [...params, limit, offset],
+      ),
+      this.db.queryAs<{ total: string }>(
+        moderatorId,
+        `SELECT count(*)::text AS total
+           FROM moderation_cases c
+          WHERE ($1::moderation_status IS NULL OR c.status = $1)
+            AND ($2::int IS NULL OR c.severity >= $2)`,
+        params,
+      ),
+    ]);
+
+    return { cases, page, limit, total: Number(counted[0]?.total ?? 0) };
   }
 
   /**

@@ -40,9 +40,30 @@ for (const [tag] of links) {
 
   const css = href.startsWith('http')
     ? await remoteStylesheet(href)
-    : await readFile(path.join(OUT_DIR, href.slice(href.indexOf('/_next/'))), 'utf8');
+    : await embedLocalAssets(
+        await readFile(path.join(OUT_DIR, href.slice(href.indexOf('/_next/'))), 'utf8'),
+      );
 
   html = html.replace(tag, `<style>${css}</style>`);
+}
+
+/**
+ * Embeds the font files a local stylesheet points at.
+ *
+ * `next/font` self-hosts the faces, so the CSS carries `url(/At/_next/static/
+ * media/….woff2)` — correct on a web server, and unresolvable in a file opened
+ * from disk. Without this the standalone page renders in Georgia and
+ * system-ui, which is a different design from the one it is meant to show.
+ */
+async function embedLocalAssets(css) {
+  for (const [, assetUrl] of [...css.matchAll(/url\((\/[^)'"]+\.(?:woff2?|ttf|otf))\)/g)]) {
+    const file = path.join(OUT_DIR, assetUrl.slice(assetUrl.indexOf('/_next/')));
+    const bytes = await readFile(file);
+    const type = assetUrl.endsWith('.woff2') ? 'font/woff2' : 'font/woff';
+    css = css.replaceAll(assetUrl, `data:${type};base64,${bytes.toString('base64')}`);
+  }
+
+  return css;
 }
 
 /**

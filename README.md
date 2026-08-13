@@ -31,12 +31,26 @@ M6's DoD is "§24 fully green", and it is not: **19 of 29 criteria are verified,
 7 are implemented but unmeasured, and 3 need a released app and production
 traffic.** [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) walks all 29 with evidence.
 
-Other known gaps, stated plainly: the Typesense adapter has never been run
-(ADR-0005, ADR-0006) and the measured search numbers are Postgres's; the Stripe
-adapter has never been run either (ADR-0007) and needs one pass against Stripe
-test mode before launch; the mobile app has never been built on iOS or Android
-in this environment, so only its types are verified; §24.16's 50k-listing
-search target is unmeasured.
+Other known gaps, stated plainly:
+
+- **There is no mobile app.** Not "unbuilt" — `apps/mobile` does not exist and
+  never has. ADR-0002 chose React Native and nothing was written against that
+  choice. Everything §18.2 places in the app — signing in, a profile, your
+  listings, messaging, saved searches, notifications — therefore exists in the
+  API and in no client at all. Earlier revisions of this file and of
+  `docs/ACCEPTANCE.md` said the app "type-checks"; that was false, and the
+  §24.17 row now says so.
+- **There is no admin console.** `apps/admin` is an empty directory. §22's
+  metrics and the moderation queue are API endpoints with no screen.
+- The Typesense adapter has never been run (ADR-0005, ADR-0006); the measured
+  search numbers are Postgres's.
+- The Stripe adapter has never been run either (ADR-0007) and needs one pass
+  against Stripe test mode before launch.
+
+What does exist and is verified: the API (139 routes), the database and its
+RLS, the business rules, and a public web app — the marketing pages, the
+listing/service/job indexes and detail pages, pricing, and the policy pages.
+The web app has no authenticated screens.
 
 ## Stack
 
@@ -56,7 +70,8 @@ PostHog, Sentry, Cloudflare Images.
 ```
 apps/api          NestJS — owns all business logic (spec §4)
 apps/web          Next.js App Router — SSR listing pages for SEO (§19)
-mobile            Expo Router — the §18.1 route table, path for path
+apps/admin        empty — §22's console has not been started
+apps/mobile       does not exist — see "known gaps" above
 packages/
   shared-types    zod schemas, §20 design tokens, and the business rules that
                   the API and both clients must agree on

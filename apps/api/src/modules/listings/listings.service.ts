@@ -160,9 +160,15 @@ export class ListingsService {
   /**
    * §13.1 publish.
    *
-   * Order matters: entitlements, then preconditions, then welfare, then
-   * quality. A seller who is over their plan limit should hear that first, not
-   * after fixing three photos.
+   * Order matters, and it is verification first.
+   *
+   * A free, unverified seller has an active-listing allowance of zero (§3.3),
+   * so checking the plan limit first answers LIMIT_EXCEEDED — which sends them
+   * to the paywall. But §3.3's identity rule is deliberately not purchasable:
+   * buying Pro would not unblock them, and the paywall is a dead end. The
+   * accurate answer is VERIFICATION_REQUIRED, which routes to the ladder
+   * (§18.2 S26). Limits are checked after, for the seller who really is over
+   * their plan.
    */
   async publish(profileId: string, listingId: string): Promise<{
     status: ListingStatus;
@@ -177,12 +183,6 @@ export class ListingsService {
     }
 
     const entitlements = await this.entitlements.forProfile(profileId);
-    this.entitlements.assertUnderLimit(
-      entitlements,
-      'activeSaleListings',
-      `${entitlements.limits.maxActiveSaleListings} aktif ilan sınırına ulaştın. Daha fazlası için planını yükselt.`,
-    );
-
     const context = await this.loadPublishContext(profileId, listingId);
 
     // §3.3 / §24.2: identity verification is the gate, and it is not
@@ -211,6 +211,13 @@ export class ListingsService {
         ? ApiException.verificationRequired(message, { failures })
         : ApiException.validation(message, { failures });
     }
+
+    // Verified but over their plan: now the paywall is the right destination.
+    this.entitlements.assertUnderLimit(
+      entitlements,
+      'activeSaleListings',
+      `${entitlements.limits.maxActiveSaleListings} aktif ilan sınırına ulaştın. Daha fazlası için planını yükselt.`,
+    );
 
     // §14.4 / §24.28. Categorical violations block outright; the rest route to
     // human review rather than refusing a seller who may be acting in good

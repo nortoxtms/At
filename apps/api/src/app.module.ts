@@ -9,7 +9,10 @@ import { AuthGuard } from './common/guards/auth.guard.js';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { AccessGrantsModule } from './modules/access-grants/access-grants.module.js';
+import { ModerationModule } from './modules/moderation/moderation.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
+import { VerificationModule } from './modules/verification/verification.module.js';
 import { EntitlementsModule } from './modules/entitlements/entitlements.module.js';
 import { HealthRecordsModule } from './modules/health-records/health-records.module.js';
 import { HorsesModule } from './modules/horses/horses.module.js';
@@ -44,6 +47,9 @@ import { ReferenceModule } from './modules/reference/reference.module.js';
     // reordering fails loudly instead of silently.
     SearchModule,
     ListingsModule,
+    VerificationModule,
+    AccessGrantsModule,
+    ModerationModule,
     ReferenceModule,
     HealthModule,
     JobsModule,

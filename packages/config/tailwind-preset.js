@@ -37,8 +37,14 @@ module.exports = {
       },
       fontFamily: {
         // §20.2: Fraunces is reserved for H1/H2, prices and horse names.
-        display: ['Fraunces', 'Georgia', 'serif'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        //
+        // The variables are set by `next/font` in the web app's root layout,
+        // which self-hosts the files and generates its own family names. The
+        // literal names stay behind them so any surface that does not define
+        // the variables — a plain HTML template, an OG image — still resolves
+        // the right face.
+        display: ['var(--font-display)', 'Fraunces', 'Georgia', 'serif'],
+        sans: ['var(--font-sans)', 'Inter', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         display: ['2rem', { lineHeight: '2.375rem', letterSpacing: letterSpacing.display }],

@@ -43,26 +43,35 @@ Automatic on push, via `.github/workflows/pages.yml`.
 
 > Settings → Pages → Build and deployment → Source → **GitHub Actions**
 
-Until that is set, the workflow's deploy job fails with "Pages is not enabled
-for this repository". Nothing in the repository can flip that switch.
+The workflow asks `configure-pages` to enable Pages itself
+(`enablement: true`), which works in some repositories and did not work in
+this one:
 
-### The repository is private
+```
+Create Pages site failed.
+Error: Resource not accessible by integration
+```
 
-GitHub Pages on a **private** repository requires a paid plan (Pro, Team or
-Enterprise). On GitHub Free, Pages is available for public repositories only,
-and enabling it on a private one is refused.
+Creating a Pages site needs repository-admin rights, and the workflow's
+`GITHUB_TOKEN` does not have them regardless of the `pages: write` permission
+the job grants. So the setting has to be flipped by hand once. After that the
+workflow publishes on every push and nothing needs touching again.
 
-Three ways forward, in the order they are worth considering:
+### Repository visibility
 
-1. **Make the repository public.** Pages then works on the free plan. The
-   published site is public either way — on GitHub Pro a private repo still
-   produces a *public* site; only GitHub Enterprise offers access-controlled
-   Pages. So this choice is about who can read the source, not about who can
-   read the site.
-2. **GitHub Pro.** Keeps the source private, publishes the site publicly.
-3. **Skip Pages.** `bash scripts/build-preview.sh` writes `apps/web/out/`,
-   which is an ordinary directory of HTML. Serve it from anywhere —
-   `npx serve apps/web/out`, Cloud Storage, Netlify, or by opening the files.
+Pages on a **private** repository requires a paid plan (Pro, Team or
+Enterprise); on GitHub Free it is available for public repositories only. This
+repository is public, so that constraint does not apply — but it is worth
+knowing that publishing the site makes the site public in every case. Even on
+GitHub Pro a private repository produces a *public* site; only Enterprise
+offers access-controlled Pages. The choice is about who can read the source,
+not about who can read the site.
+
+If neither is wanted, skip Pages entirely: `bash scripts/build-preview.sh`
+writes `apps/web/out/`, an ordinary directory of HTML that any static host
+will serve. `scripts/inline-preview.mjs` goes one step further and folds a
+single page into one self-contained file — stylesheet inlined, fonts embedded,
+no external requests — which can simply be opened.
 
 ## Building it locally
 

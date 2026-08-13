@@ -1,8 +1,40 @@
 import type { Metadata } from 'next';
+import { Fraunces, Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import './globals.css';
 import { PreviewBanner } from '@/components/PreviewBanner';
+
+/**
+ * §20.2's two faces, self-hosted.
+ *
+ * These were loaded from fonts.googleapis.com with a `<link rel="stylesheet">`,
+ * which put a third-party render-blocking request on the critical path of
+ * every page: DNS, TLS and a round trip to another origin before any text can
+ * paint. Measuring §24.18 made that concrete — the font stylesheet was the
+ * single slowest resource on the listing page by two orders of magnitude,
+ * while the document itself answered in 41 ms.
+ *
+ * `next/font` downloads the files at build time and serves them from this
+ * origin, with the @font-face rules inlined. No external request remains.
+ * That also settles a question §24.26 would have had to answer eventually:
+ * hotlinking Google Fonts transmits the visitor's IP to a third country, which
+ * is a transfer a privacy policy has to disclose. Now there is nothing to
+ * disclose.
+ */
+const fraunces = Fraunces({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['500', '600'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+const inter = Inter({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['400', '500', '600'],
+  variable: '--font-sans',
+  display: 'swap',
+});
 
 /**
  * §19.2 requires hreflang for tr/en/es/de with x-default, and §21 makes tr the
@@ -33,20 +65,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="tr">
-      {/*
-        §20.2: Fraunces for display, Inter for body. Loaded here rather than
-        via next/font so the same families can be referenced from the CSS
-        custom properties in globals.css.
-      */}
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="tr" className={`${fraunces.variable} ${inter.variable}`}>
       <body className="font-sans antialiased">
         {/* Renders only in the GitHub Pages export (scripts/build-preview.sh). */}
         <PreviewBanner />

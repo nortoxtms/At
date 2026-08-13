@@ -1,9 +1,7 @@
-import Constants from 'expo-constants';
-import * as SecureStore from 'expo-secure-store';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { VerificationLevel } from '@only-horses/shared-types';
 
-import { ApiClient, type TokenStore } from '../../core/api-client';
+import { apiClient, secureTokenStore } from '../../core/client';
 
 /**
  * Auth hook backing S03 (spec §18.2).
@@ -28,38 +26,13 @@ interface SessionResponse {
   tokens: { accessToken: string; refreshToken: string; expiresIn: string };
 }
 
-const ACCESS_KEY = 'oh.access_token';
-const REFRESH_KEY = 'oh.refresh_token';
-
-const secureTokenStore: TokenStore = {
-  getAccessToken: () => SecureStore.getItemAsync(ACCESS_KEY),
-  getRefreshToken: () => SecureStore.getItemAsync(REFRESH_KEY),
-  async setTokens({ accessToken, refreshToken }) {
-    await SecureStore.setItemAsync(ACCESS_KEY, accessToken);
-    await SecureStore.setItemAsync(REFRESH_KEY, refreshToken);
-  },
-  async clear() {
-    await SecureStore.deleteItemAsync(ACCESS_KEY);
-    await SecureStore.deleteItemAsync(REFRESH_KEY);
-  },
-};
-
-function resolveBaseUrl(): string {
-  const configured =
-    process.env.EXPO_PUBLIC_API_URL ??
-    (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl;
-
-  return configured ?? 'http://localhost:3001';
-}
-
 export function useAuth() {
   const [isPending, setIsPending] = useState(false);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
 
-  const client = useMemo(
-    () => new ApiClient({ baseUrl: resolveBaseUrl(), tokens: secureTokenStore }),
-    [],
-  );
+  // One client for the whole app (src/core/client.ts) — a second instance
+  // would run its own token refresh and race this one.
+  const client = apiClient;
 
   const establishSession = useCallback(
     async (path: string, body: unknown): Promise<AuthProfile> => {

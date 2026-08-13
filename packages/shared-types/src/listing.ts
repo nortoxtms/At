@@ -1,20 +1,7 @@
 import { z } from 'zod';
 
 import { fieldVisibility, listingType, priceType } from './enums.js';
-
-/**
- * Boolean query parameter.
- *
- * NOT z.coerce.boolean(): that applies JavaScript truthiness, so the string
- * "false" coerces to `true` and `?includeOnRequest=false` silently does
- * nothing. Every filter in §18.2 S07 that can be switched off depends on this
- * parsing the way a reader would expect.
- */
-const booleanParam = z
-  .union([z.boolean(), z.enum(['true', 'false', '1', '0', 'yes', 'no'])])
-  .transform((value) =>
-    typeof value === 'boolean' ? value : ['true', '1', 'yes'].includes(value),
-  );
+import { booleanParam } from './params.js';
 
 /**
  * Listing schemas — spec §7, §13.1, §18.2 S13 (the eight-step wizard).

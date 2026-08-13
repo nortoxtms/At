@@ -1,4 +1,13 @@
-import type { ListingSearchQuery, ListingSearchResult } from '@only-horses/shared-types';
+import type {
+  JobSearchQuery,
+  JobSearchResult,
+  ListingSearchQuery,
+  ListingSearchResult,
+  ProfessionalSearchQuery,
+  ProfessionalSearchResult,
+  ServiceSearchQuery,
+  ServiceSearchResult,
+} from '@only-horses/shared-types';
 
 /**
  * Search abstraction — spec §11.
@@ -12,8 +21,7 @@ import type { ListingSearchQuery, ListingSearchResult } from '@only-horses/share
  */
 
 /** The §11.1 `listings` document, denormalized for filtering and display. */
-export interface ListingDocument {
-  id: string;
+export interface ListingDocument extends SearchDocument {
   slug: string;
   title: string;
   summary: string;
@@ -52,17 +60,58 @@ export interface ListingDocument {
   cover_blurhash: string;
 }
 
+/**
+ * §11.1: "Analogous collections: `services`, `jobs`, `professionals`."
+ *
+ * They share the listings document's two structural requirements — an `id` to
+ * upsert on and an optional `geo` point for radius filtering — and nothing
+ * else, so the indexing side is typed on the shared part and each collection
+ * keeps its own fields.
+ */
+export interface SearchDocument {
+  id: string;
+  geo: [number, number] | null;
+  [field: string]: unknown;
+}
+
+export interface ServiceDocument extends SearchDocument {
+  slug: string;
+  category: string;
+  title: string;
+  provider_id: string;
+  published_at: number;
+}
+
+export interface JobDocument extends SearchDocument {
+  slug: string;
+  title: string;
+  job_type: string;
+  published_at: number;
+}
+
+export interface ProfessionalDocument extends SearchDocument {
+  handle: string;
+  display_name: string;
+  roles: string[];
+}
+
 export interface SearchProvider {
   readonly name: string;
 
   /** Creates collections if absent. Safe to call on every boot. */
   ensureCollections(): Promise<void>;
 
-  upsert(collection: string, documents: ListingDocument[]): Promise<void>;
+  upsert(collection: string, documents: SearchDocument[]): Promise<void>;
 
   delete(collection: string, documentIds: string[]): Promise<void>;
 
   searchListings(query: ListingSearchQuery): Promise<ListingSearchResult>;
+
+  searchServices(query: ServiceSearchQuery): Promise<ServiceSearchResult>;
+
+  searchJobs(query: JobSearchQuery): Promise<JobSearchResult>;
+
+  searchProfessionals(query: ProfessionalSearchQuery): Promise<ProfessionalSearchResult>;
 }
 
 export const SEARCH_PROVIDER = Symbol('SEARCH_PROVIDER');

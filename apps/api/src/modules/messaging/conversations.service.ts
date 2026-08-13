@@ -368,6 +368,23 @@ export class ConversationsService {
     return rows;
   }
 
+  /**
+   * Posts a system line into an existing thread.
+   *
+   * Used by the job application flow (§13.6): a status change is announced in
+   * the thread the application opened, so the candidate reads the decision
+   * where the conversation already lives rather than only in a notification
+   * they may have cleared. There is no sender — see migration 0034 on why a
+   * system message cannot satisfy `messages_insert`.
+   */
+  async postSystemMessage(
+    conversationId: string,
+    text: string,
+    attachment?: { type: string; payload: Record<string, unknown> },
+  ): Promise<void> {
+    await this.messaging.sendSystemMessage({ channelId: conversationId, text, attachment });
+  }
+
   async archive(profileId: string, conversationId: string): Promise<void> {
     await this.assertParticipant(profileId, conversationId);
     await this.db.queryAs(

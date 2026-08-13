@@ -13,15 +13,24 @@ This README covers how to run what exists.
 
 ## Where the build stands
 
+Each milestone's Definition of Done (§23) has an executable check —
+`scripts/mN-acceptance.sh` — that runs against a live API and a real database.
+"Done" below means that script passes, not that the code compiles.
+
 | Milestone | State |
 |---|---|
-| **M0 — Foundations** | Database, shared rules and API auth are working; see below |
-| M1 — Identity & stable | Not started |
-| M2 — Listings & search | Not started |
-| M3 — Trust & messaging | Not started |
-| M4 — Services, jobs, reviews | Not started |
+| **M0 — Foundations** | Done · schema, migrations, seed data, API auth, CI |
+| **M1 — Identity & stable** | Done · `scripts/m1-acceptance.sh` |
+| **M2 — Listings & search** | Done · `scripts/m2-acceptance.sh` |
+| **M3 — Trust & messaging** | Done · `scripts/m3-acceptance.sh` |
+| **M4 — Services, jobs, reviews** | Done · `scripts/m4-acceptance.sh` |
 | M5 — Monetization | Not started |
 | M6 — Polish & launch | Not started |
+
+Known gaps, stated plainly: the Typesense adapter has never been run
+(ADR-0005, ADR-0006) and the measured search numbers are Postgres's; the mobile
+app has never been built on iOS or Android in this environment, so only its
+types are verified; §24.16's 50k-listing search target is unmeasured.
 
 ## Stack
 
@@ -101,6 +110,19 @@ DIRECT_URL=postgresql://postgres@localhost:5432/only_horses \
 DATABASE_URL=postgresql://only_horses_app@localhost:5432/only_horses \
   pnpm test:db
 ```
+
+### Milestone acceptance runs
+
+Each script drives §23's Definition of Done over HTTP against a running API —
+real database, real storage, real notifications. Start the API first.
+
+```bash
+bash scripts/m4-acceptance.sh   # post → apply → shortlist → message, end to end
+```
+
+They register a handful of accounts, so §12's auth rate limit (10 per 5 minutes
+per IP) refuses a second run inside five minutes. That is the limiter working;
+wait, or restart the API to clear its window.
 
 ## Migrations
 

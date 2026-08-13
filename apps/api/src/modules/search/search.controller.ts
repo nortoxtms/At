@@ -1,6 +1,11 @@
 import { Controller, Get, Post, Query, UseGuards, Headers, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { listingSearchSchema } from '@only-horses/shared-types';
+import {
+  jobSearchSchema,
+  listingSearchSchema,
+  professionalSearchSchema,
+  serviceSearchSchema,
+} from '@only-horses/shared-types';
 import { timingSafeEqual } from 'node:crypto';
 
 import { Public } from '../../common/guards/auth.guard.js';
@@ -40,6 +45,39 @@ export class SearchController {
     };
   }
 
+  /**
+   * §12 GET /services/search, /jobs/search — and the professional directory
+   * (§23 M4).
+   *
+   * All three are registered on this controller, and SearchModule is imported
+   * before ServicesModule and JobsModule for the same reason it is imported
+   * before ListingsModule: `GET /jobs/:idOrSlug` would otherwise match
+   * "search" and every query would 404 as a missing job.
+   */
+  @Get('services/search')
+  @Public()
+  @RateLimit({ limit: 120, windowSeconds: 60, per: 'profile' })
+  async searchServices(@Query() rawQuery: Record<string, unknown>) {
+    const query = serviceSearchSchema.parse(normalizeArrays(rawQuery));
+    return envelope(await this.search.searchServices(query));
+  }
+
+  @Get('jobs/search')
+  @Public()
+  @RateLimit({ limit: 120, windowSeconds: 60, per: 'profile' })
+  async searchJobs(@Query() rawQuery: Record<string, unknown>) {
+    const query = jobSearchSchema.parse(normalizeArrays(rawQuery));
+    return envelope(await this.search.searchJobs(query));
+  }
+
+  @Get('professionals/search')
+  @Public()
+  @RateLimit({ limit: 120, windowSeconds: 60, per: 'profile' })
+  async searchProfessionals(@Query() rawQuery: Record<string, unknown>) {
+    const query = professionalSearchSchema.parse(normalizeArrays(rawQuery));
+    return envelope(await this.search.searchProfessionals(query));
+  }
+
   /** §11.4 outbox drain, invoked by Cloud Scheduler. */
   @Post('jobs/search-sync')
   @Public()
@@ -64,9 +102,32 @@ export class SearchController {
  * value; zod arrays need the former shape either way, so a lone value is
  * wrapped rather than rejected.
  */
+function envelope<THit>(result: {
+  hits: THit[];
+  found: number;
+  page: number;
+  limit: number;
+  facets: Record<string, { value: string; count: number }[]>;
+  tookMs: number;
+}) {
+  return {
+    data: result.hits,
+    meta: {
+      page: result.page,
+      limit: result.limit,
+      total: result.found,
+      hasMore: result.page * result.limit < result.found,
+      facets: result.facets,
+      tookMs: result.tookMs,
+    },
+  };
+}
+
 function normalizeArrays(query: Record<string, unknown>): Record<string, unknown> {
   const arrayKeys = [
     'types', 'sexes', 'breeds', 'disciplines', 'trainingLevels', 'riderLevels', 'colors',
+    // M4's collections
+    'categories', 'jobTypes', 'roles', 'accommodation', 'specialties', 'languages',
   ];
 
   const normalized = { ...query };

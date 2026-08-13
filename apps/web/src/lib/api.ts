@@ -1,4 +1,9 @@
-import type { ListingSearchHit } from '@only-horses/shared-types';
+import type {
+  JobSearchHit,
+  ListingSearchHit,
+  ProfessionalSearchHit,
+  ServiceSearchHit,
+} from '@only-horses/shared-types';
 
 /**
  * Server-side API access for the Next.js app (spec §19).
@@ -155,3 +160,168 @@ export const LISTING_TYPE_LABEL_TR: Record<string, string> = {
   stud: 'Aygır hizmeti',
   loan: 'Ödünç',
 };
+
+// ── M4: services, jobs and the professional directory (§19.1) ───────────
+
+export interface JobDetail {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  responsibilities: string | null;
+  requirements: string | null;
+  job_type: string;
+  roles_needed: string[];
+  disciplines: string[];
+  country_code: string;
+  region: string | null;
+  city: string | null;
+  salary_min: string | null;
+  salary_max: string | null;
+  salary_currency: string | null;
+  salary_period: string | null;
+  salary_public: boolean;
+  accommodation: string | null;
+  meals_included: boolean;
+  visa_support: boolean;
+  horse_count: number | null;
+  experience_years_min: number | null;
+  languages_required: string[];
+  start_date: string | null;
+  application_deadline: string | null;
+  status: string;
+  application_count: number;
+  published_at: string | null;
+  expires_at: string | null;
+  poster_name: string | null;
+  poster_handle: string | null;
+  organization_name: string | null;
+  organization_slug: string | null;
+  /** §26's employment-terms notice, shipped by the API. */
+  notice: { tr: string; en: string };
+}
+
+export interface ServiceDetail {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  category: string;
+  category_name_tr: string;
+  price_min: string | null;
+  price_max: string | null;
+  price_unit: string | null;
+  currency: string;
+  country_code: string;
+  region: string | null;
+  city: string | null;
+  service_radius_km: number | null;
+  is_mobile: boolean;
+  availability_note: string | null;
+  provider_id: string;
+  provider_handle: string;
+  provider_name: string;
+  verification_level: string;
+  trust_score: number;
+  organization_name: string | null;
+  rating_average: string | null;
+  rating_count: string;
+  /** §26: present on transport services, null everywhere else. */
+  notice: { tr: string; en: string } | null;
+}
+
+export function getJob(slug: string): Promise<JobDetail | null> {
+  return get<JobDetail>(`/jobs/${encodeURIComponent(slug)}`, 300);
+}
+
+export function getService(slug: string): Promise<ServiceDetail | null> {
+  return get<ServiceDetail>(`/services/${encodeURIComponent(slug)}`, 300);
+}
+
+async function search<THit>(
+  path: string,
+  params: Record<string, string | number | undefined>,
+): Promise<{ hits: THit[]; total: number }> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') query.set(key, String(value));
+  }
+
+  const response = await fetch(`${API_URL}/v1${path}?${query}`, {
+    next: { revalidate: 300 },
+    headers: { accept: 'application/json' },
+  });
+
+  if (!response.ok) return { hits: [], total: 0 };
+
+  const body = (await response.json()) as { data: THit[]; meta: { total: number } };
+  return { hits: body.data, total: body.meta.total };
+}
+
+export function searchJobs(
+  params: Record<string, string | number | undefined>,
+): Promise<{ hits: JobSearchHit[]; total: number }> {
+  return search<JobSearchHit>('/jobs/search', params);
+}
+
+export function searchServices(
+  params: Record<string, string | number | undefined>,
+): Promise<{ hits: ServiceSearchHit[]; total: number }> {
+  return search<ServiceSearchHit>('/services/search', params);
+}
+
+export function searchProfessionals(
+  params: Record<string, string | number | undefined>,
+): Promise<{ hits: ProfessionalSearchHit[]; total: number }> {
+  return search<ProfessionalSearchHit>('/professionals/search', params);
+}
+
+export const JOB_TYPE_LABEL_TR: Record<string, string> = {
+  full_time: 'Tam zamanlı',
+  part_time: 'Yarı zamanlı',
+  seasonal: 'Sezonluk',
+  contract: 'Sözleşmeli',
+  internship: 'Staj',
+  working_student: 'Çalışan öğrenci',
+};
+
+export const ACCOMMODATION_LABEL_TR: Record<string, string> = {
+  none: 'Konaklama yok',
+  shared: 'Paylaşımlı konaklama',
+  private: 'Özel konaklama',
+  negotiable: 'Konaklama görüşülür',
+};
+
+export const SALARY_PERIOD_LABEL_TR: Record<string, string> = {
+  hour: 'saat',
+  day: 'gün',
+  week: 'hafta',
+  month: 'ay',
+  year: 'yıl',
+};
+
+/** §18.2 S17: a job with no published salary reads "Maaş görüşülür". */
+export function formatSalary(job: {
+  salary_min?: string | null;
+  salary_max?: string | null;
+  salary_currency?: string | null;
+  salary_period?: string | null;
+}): string {
+  if (!job.salary_min && !job.salary_max) return 'Maaş görüşülür';
+
+  const currency = job.salary_currency ?? 'EUR';
+  const format = (value: string) =>
+    new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(Number(value));
+
+  const range =
+    job.salary_min && job.salary_max && job.salary_min !== job.salary_max
+      ? `${format(job.salary_min)} – ${format(job.salary_max)}`
+      : format((job.salary_min ?? job.salary_max)!);
+
+  const period = job.salary_period ? `/${SALARY_PERIOD_LABEL_TR[job.salary_period]}` : '';
+  return `${range}${period}`;
+}

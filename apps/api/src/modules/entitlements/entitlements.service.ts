@@ -33,6 +33,8 @@ export interface Entitlements {
     activeSaleListings: number;
     activeServiceListings: number;
     messagesToday: number;
+    /** §16.1: Business tier includes 5 job posts a month; everyone else pays. */
+    jobPostsThisMonth: number;
   };
 }
 
@@ -51,6 +53,7 @@ export class EntitlementsService {
       active_sale_listings: string;
       active_service_listings: string;
       messages_today: string;
+      job_posts_this_month: string;
     }>(
       profileId,
       `SELECT
@@ -64,7 +67,13 @@ export class EntitlementsService {
          (SELECT count(*) FROM service_listings sl
            WHERE sl.provider_profile_id = p.id AND sl.status = 'active') AS active_service_listings,
          (SELECT count(*) FROM conversations c
-           WHERE c.created_by = p.id AND c.created_at > now() - INTERVAL '1 day') AS messages_today
+           WHERE c.created_by = p.id AND c.created_at > now() - INTERVAL '1 day') AS messages_today,
+         -- Calendar month, not a rolling 30 days: §16.1 says "5 job posts/mo",
+         -- and a Business subscriber whose allowance resets on a date they
+         -- cannot see would read as a broken allowance.
+         (SELECT count(*) FROM job_listings j
+           WHERE j.poster_profile_id = p.id
+             AND j.published_at >= date_trunc('month', now())) AS job_posts_this_month
        FROM profiles p
        LEFT JOIN subscriptions s
          ON s.profile_id = p.id AND s.status IN ('active','trialing')
@@ -86,6 +95,7 @@ export class EntitlementsService {
         activeSaleListings: Number(row.active_sale_listings),
         activeServiceListings: Number(row.active_service_listings),
         messagesToday: Number(row.messages_today),
+        jobPostsThisMonth: Number(row.job_posts_this_month),
       },
     };
   }

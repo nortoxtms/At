@@ -18,6 +18,9 @@ import { EntitlementsModule } from './modules/entitlements/entitlements.module.j
 import { HealthRecordsModule } from './modules/health-records/health-records.module.js';
 import { HorsesModule } from './modules/horses/horses.module.js';
 import { ListingsModule } from './modules/listings/listings.module.js';
+import { ServicesModule } from './modules/services/services.module.js';
+import { JobBoardModule } from './modules/jobs/jobs.module.js';
+import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { MediaModule } from './modules/media/media.module.js';
 import { SearchModule } from './modules/search/search.module.js';
 import { ProfilesModule } from './modules/profiles/profiles.module.js';
@@ -46,8 +49,15 @@ import { ReferenceModule } from './modules/reference/reference.module.js';
     // shadow `GET /listings/search` and every search would 404 as a missing
     // listing. scripts/m2-acceptance.sh hits the search route first so a
     // reordering fails loudly instead of silently.
+    // Same ordering rule for services, jobs and the directory: SearchModule
+    // owns `/services/search`, `/jobs/search` and `/professionals/search`, and
+    // registering it after these modules would let `/services/:idOrSlug` and
+    // `/jobs/:idOrSlug` swallow them.
     SearchModule,
     ListingsModule,
+    ServicesModule,
+    JobBoardModule,
+    ReviewsModule,
     VerificationModule,
     AccessGrantsModule,
     ModerationModule,

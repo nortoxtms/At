@@ -1,7 +1,15 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { DatabaseService } from '../../database/database.service.js';
-import { SEARCH_PROVIDER, type ListingDocument, type SearchProvider } from './search.provider.js';
+import {
+  SEARCH_PROVIDER,
+  type ListingDocument,
+  type SearchDocument,
+  type SearchProvider,
+} from './search.provider.js';
+
+/** §11.1's collections, and the only values `search_outbox.collection` takes. */
+type IndexedCollection = 'listings' | 'services' | 'jobs' | 'professionals';
 
 /**
  * Outbox drain — spec §11.4.
@@ -48,26 +56,35 @@ export class SearchIndexerService {
 
     if (batch.length === 0) return { indexed: 0, deleted: 0, failed: 0 };
 
-    const listingIds = batch
-      .filter((row) => row.collection === 'listings' && row.operation === 'upsert')
-      .map((row) => row.document_id);
-
-    const documents = listingIds.length > 0 ? await this.buildListingDocuments(listingIds) : [];
-
-    // A listing that no longer qualifies for the index — paused, withdrawn,
-    // held for review — is a delete, not a missing upsert. Leaving it indexed
-    // is how a withdrawn listing keeps taking inquiries.
-    const indexedIds = new Set(documents.map((document) => document.id));
-    const toDelete = [
-      ...batch.filter((row) => row.operation === 'delete').map((row) => row.document_id),
-      ...listingIds.filter((id) => !indexedIds.has(id)),
-    ];
-
+    let indexed = 0;
+    let deleted = 0;
     let failed = 0;
 
     try {
-      if (documents.length > 0) await this.search.upsert('listings', documents);
-      if (toDelete.length > 0) await this.search.delete('listings', toDelete);
+      // §11.1's four collections drain through one loop. Each has its own
+      // projection, but the rule is identical everywhere: a row that no longer
+      // qualifies for the index — paused, withdrawn, held for review, made
+      // private — is a *delete*, not a missing upsert. Leaving it indexed is
+      // how a withdrawn listing keeps taking inquiries.
+      for (const collection of ['listings', 'services', 'jobs', 'professionals'] as const) {
+        const rows = batch.filter((row) => row.collection === collection);
+        if (rows.length === 0) continue;
+
+        const upsertIds = rows.filter((row) => row.operation === 'upsert').map((row) => row.document_id);
+        const documents = upsertIds.length > 0 ? await this.buildDocuments(collection, upsertIds) : [];
+        const present = new Set(documents.map((document) => document.id));
+
+        const toDelete = [
+          ...rows.filter((row) => row.operation === 'delete').map((row) => row.document_id),
+          ...upsertIds.filter((id) => !present.has(id)),
+        ];
+
+        if (documents.length > 0) await this.search.upsert(collection, documents);
+        if (toDelete.length > 0) await this.search.delete(collection, toDelete);
+
+        indexed += documents.length;
+        deleted += toDelete.length;
+      }
 
       await this.db.query(
         `UPDATE search_outbox SET processed_at = now(), last_error = NULL WHERE id = ANY($1::bigint[])`,
@@ -87,27 +104,250 @@ export class SearchIndexerService {
       this.logger.error(`Indexing batch of ${batch.length} failed: ${message}`);
     }
 
-    return { indexed: documents.length, deleted: toDelete.length, failed };
+    return { indexed, deleted, failed };
   }
 
   /** Full reindex — `pnpm --filter api search:reindex` (§11.4). */
-  async reindexAll(): Promise<number> {
+  async reindexAll(): Promise<Record<string, number>> {
     await this.search.ensureCollections();
 
-    const ids = await this.db.query<{ id: string }>(
-      `SELECT id FROM listings WHERE status IN ('active','under_offer')`,
-    );
+    const sources: Record<IndexedCollection, string> = {
+      listings: `SELECT id FROM listings WHERE status IN ('active','under_offer')`,
+      services: `SELECT id FROM service_listings WHERE status = 'active'`,
+      jobs: `SELECT id FROM job_listings WHERE status = 'active'`,
+      // The directory indexes people who present themselves as professionals,
+      // which is what a public role profile means (§7). Everyone else — the
+      // buyers — is deliberately absent.
+      professionals: `SELECT p.id FROM profiles p
+                      WHERE p.deleted_at IS NULL AND p.is_suspended = FALSE
+                        AND EXISTS (SELECT 1 FROM role_profiles r
+                                    WHERE r.profile_id = p.id AND r.is_public)`,
+    };
 
-    let indexed = 0;
-    for (let offset = 0; offset < ids.length; offset += 200) {
-      const slice = ids.slice(offset, offset + 200).map((row) => row.id);
-      const documents = await this.buildListingDocuments(slice);
-      await this.search.upsert('listings', documents);
-      indexed += documents.length;
+    const counts: Record<string, number> = {};
+
+    for (const [collection, sql] of Object.entries(sources) as [IndexedCollection, string][]) {
+      const ids = await this.db.query<{ id: string }>(sql);
+      let indexed = 0;
+
+      for (let offset = 0; offset < ids.length; offset += 200) {
+        const slice = ids.slice(offset, offset + 200).map((row) => row.id);
+        const documents = await this.buildDocuments(collection, slice);
+        if (documents.length > 0) await this.search.upsert(collection, documents);
+        indexed += documents.length;
+      }
+
+      counts[collection] = indexed;
+      this.logger.log(`Reindexed ${indexed} ${collection}`);
     }
 
-    this.logger.log(`Reindexed ${indexed} listings`);
-    return indexed;
+    return counts;
+  }
+
+  private async buildDocuments(
+    collection: IndexedCollection,
+    ids: string[],
+  ): Promise<SearchDocument[]> {
+    switch (collection) {
+      case 'listings':
+        return this.buildListingDocuments(ids);
+      case 'services':
+        return this.buildServiceDocuments(ids);
+      case 'jobs':
+        return this.buildJobDocuments(ids);
+      case 'professionals':
+        return this.buildProfessionalDocuments(ids);
+    }
+  }
+
+  /** §11.1's `services` collection — the §18.2 S15 hub reads from this. */
+  private async buildServiceDocuments(ids: string[]): Promise<SearchDocument[]> {
+    const rows = await this.db.query<Record<string, unknown>>(
+      `SELECT s.id, s.slug, s.title, s.description, s.category,
+              s.price_min, s.price_max, s.price_unit, s.currency,
+              s.country_code, s.region, s.city, s.is_mobile, s.service_radius_km,
+              s.published_at,
+              CASE WHEN s.price_min IS NULL THEN NULL
+                   ELSE s.price_min * COALESCE(fx.rate_to_eur, 1) END AS price_min_eur,
+              p.id AS provider_id, p.display_name AS provider_name,
+              p.verification_level AS provider_verification, p.trust_score AS provider_trust_score,
+              av.cf_image_id AS provider_avatar,
+              o.name AS organization_name,
+              r.average AS rating_average, r.total AS rating_count,
+              ST_Y(s.location::geometry) AS lat, ST_X(s.location::geometry) AS lng
+       FROM service_listings s
+       JOIN profiles p ON p.id = s.provider_profile_id
+       LEFT JOIN media av ON av.id = p.avatar_media_id
+       LEFT JOIN organizations o ON o.id = s.provider_org_id
+       LEFT JOIN fx_rates fx ON fx.currency = s.currency
+       LEFT JOIN LATERAL review_summary(p.id, NULL) r ON TRUE
+       WHERE s.id = ANY($1::uuid[]) AND s.status = 'active' AND p.deleted_at IS NULL`,
+      [ids],
+    );
+
+    return rows.map((row) => ({
+      id: row.id as string,
+      slug: (row.slug as string) ?? '',
+      title: (row.title as string) ?? '',
+      description: (row.description as string) ?? '',
+      category: (row.category as string) ?? '',
+      provider_id: row.provider_id as string,
+      provider_name: (row.provider_name as string) ?? '',
+      provider_verification: (row.provider_verification as string) ?? 'none',
+      provider_trust_score: Number(row.provider_trust_score ?? 0),
+      provider_avatar: (row.provider_avatar as string) ?? '',
+      organization_name: (row.organization_name as string) ?? '',
+      price_min: row.price_min === null ? null : Number(row.price_min),
+      price_max: row.price_max === null ? null : Number(row.price_max),
+      price_min_eur: row.price_min_eur === null ? null : Number(row.price_min_eur),
+      price_unit: (row.price_unit as string) ?? '',
+      currency: (row.currency as string) ?? 'EUR',
+      country_code: (row.country_code as string) ?? '',
+      region: (row.region as string) ?? '',
+      city: (row.city as string) ?? '',
+      is_mobile: Boolean(row.is_mobile),
+      service_radius_km: row.service_radius_km === null ? null : Number(row.service_radius_km),
+      rating_average: row.rating_average === null ? null : Number(row.rating_average),
+      rating_count: Number(row.rating_count ?? 0),
+      published_at: row.published_at ? new Date(row.published_at as string).getTime() : 0,
+      geo: geoOf(row),
+    }));
+  }
+
+  /**
+   * §11.1's `jobs` collection.
+   *
+   * `salary_monthly_eur` is the only derived field, and it is what makes
+   * §18.2 S17's salary filter comparable across a monthly Turkish wage and an
+   * hourly German one. A job whose salary the poster hid (§18.2 S20) is
+   * indexed *without* it — filterable by everything else, never leaking the
+   * number through a range query.
+   */
+  private async buildJobDocuments(ids: string[]): Promise<SearchDocument[]> {
+    const rows = await this.db.query<Record<string, unknown>>(
+      `SELECT j.id, j.slug, j.title, j.description, j.job_type, j.roles_needed, j.disciplines,
+              j.country_code, j.region, j.city,
+              j.salary_min, j.salary_max, j.salary_currency, j.salary_period, j.salary_public,
+              j.accommodation, j.meals_included, j.visa_support,
+              j.experience_years_min, j.application_count, j.published_at,
+              CASE WHEN j.salary_public AND j.salary_min IS NOT NULL AND j.salary_period IS NOT NULL
+                   THEN j.salary_min * COALESCE(fx.rate_to_eur, 1) * CASE j.salary_period
+                        WHEN 'hour'  THEN 173.33
+                        WHEN 'day'   THEN 21.67
+                        WHEN 'week'  THEN 52.0 / 12
+                        WHEN 'month' THEN 1
+                        WHEN 'year'  THEN 1.0 / 12
+                        ELSE 1 END
+              END AS salary_monthly_eur,
+              o.name AS organization_name, logo.cf_image_id AS organization_logo,
+              p.display_name AS poster_name,
+              ST_Y(j.location::geometry) AS lat, ST_X(j.location::geometry) AS lng
+       FROM job_listings j
+       LEFT JOIN organizations o ON o.id = j.organization_id
+       LEFT JOIN media logo ON logo.id = o.logo_media_id
+       LEFT JOIN profiles p ON p.id = j.poster_profile_id
+       LEFT JOIN fx_rates fx ON fx.currency = j.salary_currency
+       WHERE j.id = ANY($1::uuid[]) AND j.status = 'active'`,
+      [ids],
+    );
+
+    return rows.map((row) => ({
+      id: row.id as string,
+      slug: (row.slug as string) ?? '',
+      title: (row.title as string) ?? '',
+      description: (row.description as string) ?? '',
+      job_type: (row.job_type as string) ?? '',
+      roles_needed: (row.roles_needed as string[]) ?? [],
+      disciplines: (row.disciplines as string[]) ?? [],
+      organization_name: (row.organization_name as string) ?? '',
+      organization_logo: (row.organization_logo as string) ?? '',
+      poster_name: (row.poster_name as string) ?? '',
+      country_code: (row.country_code as string) ?? '',
+      region: (row.region as string) ?? '',
+      city: (row.city as string) ?? '',
+      salary_min: row.salary_public && row.salary_min !== null ? Number(row.salary_min) : null,
+      salary_max: row.salary_public && row.salary_max !== null ? Number(row.salary_max) : null,
+      salary_currency: row.salary_public ? ((row.salary_currency as string) ?? '') : '',
+      salary_period: row.salary_public ? ((row.salary_period as string) ?? '') : '',
+      salary_monthly_eur:
+        row.salary_monthly_eur === null || row.salary_monthly_eur === undefined
+          ? null
+          : Number(row.salary_monthly_eur),
+      accommodation: (row.accommodation as string) ?? '',
+      meals_included: Boolean(row.meals_included),
+      visa_support: Boolean(row.visa_support),
+      experience_years_min:
+        row.experience_years_min === null ? null : Number(row.experience_years_min),
+      application_count: Number(row.application_count ?? 0),
+      published_at: row.published_at ? new Date(row.published_at as string).getTime() : 0,
+      geo: geoOf(row),
+    }));
+  }
+
+  /**
+   * §11.1's `professionals` collection.
+   *
+   * Only public role profiles are aggregated, and only the fields a directory
+   * card shows: no phone, no email, no bio. The point is indexed so "yakınımda"
+   * can work, and — exactly as for listings — the API returns a distance
+   * rounded to whole kilometres and never the coordinates themselves.
+   */
+  private async buildProfessionalDocuments(ids: string[]): Promise<SearchDocument[]> {
+    const rows = await this.db.query<Record<string, unknown>>(
+      `SELECT p.id, p.handle, p.display_name, p.country_code, p.region, p.city,
+              p.languages, p.verification_level, p.trust_score, p.response_rate, p.created_at,
+              av.cf_image_id AS avatar,
+              r.average AS rating_average, r.total AS rating_count,
+              agg.roles, agg.headline, agg.specialties, agg.disciplines,
+              agg.years_experience, agg.travels, agg.service_radius_km,
+              (SELECT count(*) FROM service_listings s
+                WHERE s.provider_profile_id = p.id AND s.status = 'active')::int AS service_count,
+              ST_Y(p.location::geometry) AS lat, ST_X(p.location::geometry) AS lng
+       FROM profiles p
+       LEFT JOIN media av ON av.id = p.avatar_media_id
+       LEFT JOIN LATERAL review_summary(p.id, NULL) r ON TRUE
+       JOIN LATERAL (
+         SELECT array_agg(rp.role::text ORDER BY rp.is_primary DESC) AS roles,
+                (array_agg(rp.headline ORDER BY rp.is_primary DESC))[1] AS headline,
+                COALESCE(array_agg(DISTINCT sp) FILTER (WHERE sp IS NOT NULL), '{}') AS specialties,
+                COALESCE(array_agg(DISTINCT dp) FILTER (WHERE dp IS NOT NULL), '{}') AS disciplines,
+                max(rp.years_experience) AS years_experience,
+                bool_or(rp.travels) AS travels,
+                max(rp.service_radius_km) AS service_radius_km
+         FROM role_profiles rp
+         LEFT JOIN LATERAL unnest(rp.specialties) sp ON TRUE
+         LEFT JOIN LATERAL unnest(rp.disciplines) dp ON TRUE
+         WHERE rp.profile_id = p.id AND rp.is_public
+       ) agg ON agg.roles IS NOT NULL
+       WHERE p.id = ANY($1::uuid[]) AND p.deleted_at IS NULL AND p.is_suspended = FALSE`,
+      [ids],
+    );
+
+    return rows.map((row) => ({
+      id: row.id as string,
+      handle: (row.handle as string) ?? '',
+      display_name: (row.display_name as string) ?? '',
+      headline: (row.headline as string) ?? '',
+      avatar: (row.avatar as string) ?? '',
+      roles: (row.roles as string[]) ?? [],
+      specialties: (row.specialties as string[]) ?? [],
+      disciplines: (row.disciplines as string[]) ?? [],
+      languages: (row.languages as string[]) ?? [],
+      years_experience: row.years_experience === null ? null : Number(row.years_experience),
+      country_code: (row.country_code as string) ?? '',
+      region: (row.region as string) ?? '',
+      city: (row.city as string) ?? '',
+      travels: Boolean(row.travels),
+      service_radius_km: row.service_radius_km === null ? null : Number(row.service_radius_km),
+      verification_level: (row.verification_level as string) ?? 'none',
+      trust_score: Number(row.trust_score ?? 0),
+      rating_average: row.rating_average === null ? null : Number(row.rating_average),
+      rating_count: Number(row.rating_count ?? 0),
+      response_rate: row.response_rate === null ? null : Number(row.response_rate),
+      service_count: Number(row.service_count ?? 0),
+      joined_at: row.created_at ? new Date(row.created_at as string).getTime() : 0,
+      geo: geoOf(row),
+    }));
   }
 
   /**
@@ -220,6 +460,13 @@ export class SearchIndexerService {
       };
     });
   }
+}
+
+/** Every projection stores the point the same way: [lat, lng] or nothing. */
+function geoOf(row: Record<string, unknown>): [number, number] | null {
+  return row.lat === null || row.lat === undefined
+    ? null
+    : [Number(row.lat), Number(row.lng)];
 }
 
 function ageYears(dateOfBirth: string | null): number {

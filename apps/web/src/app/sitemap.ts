@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-import { searchListings } from '@/lib/api';
+import { searchJobs, searchListings, searchServices } from '@/lib/api';
 
 /**
  * Sitemap — spec §19.2.
@@ -31,7 +31,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${appUrl}/tr/refah-politikasi`, changeFrequency: 'yearly', priority: 0.3 },
   ];
 
-  const { hits } = await searchListings({ limit: 50, sort: 'newest' });
+  const [{ hits }, services, jobs] = await Promise.all([
+    searchListings({ limit: 50, sort: 'newest' }),
+    searchServices({ limit: 50, sort: 'newest' }),
+    searchJobs({ limit: 50, sort: 'newest' }),
+  ]);
+
+  // §19.2's segments. Each is capped independently, because a single 45k
+  // ceiling shared across segments would let listings crowd jobs out entirely.
+  const serviceRoutes: MetadataRoute.Sitemap = services.hits
+    .slice(0, MAX_URLS_PER_FILE)
+    .map((service) => ({
+      url: `${appUrl}/tr/hizmetler/${service.slug}`,
+      lastModified: service.publishedAt ? new Date(service.publishedAt) : undefined,
+      changeFrequency: 'weekly',
+      priority: 0.6,
+    }));
+
+  const jobRoutes: MetadataRoute.Sitemap = jobs.hits.slice(0, MAX_URLS_PER_FILE).map((job) => ({
+    url: `${appUrl}/tr/isler/${job.slug}`,
+    lastModified: job.publishedAt ? new Date(job.publishedAt) : undefined,
+    // Job postings churn faster than anything else on the site: they are
+    // filled, and Google Jobs penalises stale ones.
+    changeFrequency: 'daily',
+    priority: 0.7,
+  }));
 
   const listingRoutes: MetadataRoute.Sitemap = hits.slice(0, MAX_URLS_PER_FILE).map((hit) => ({
     url: `${appUrl}/tr/atlar/${hit.slug}`,
@@ -46,5 +70,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   }));
 
-  return [...staticRoutes, ...listingRoutes];
+  return [...staticRoutes, ...listingRoutes, ...serviceRoutes, ...jobRoutes];
 }

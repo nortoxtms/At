@@ -81,6 +81,36 @@ export class ApiClient {
     return this.unwrap<T>(response);
   }
 
+  /**
+   * Same request, but keeps the `meta` envelope.
+   *
+   * The search screens need it: `meta.total` is the result count in the header
+   * and the signal for whether another page exists, and `request` deliberately
+   * throws the envelope away so ordinary callers are not handed one.
+   */
+  async requestWithMeta<T, M = Record<string, unknown>>(
+    path: string,
+    init: RequestOptions = {},
+  ): Promise<{ data: T; meta: M }> {
+    const response = await this.send(path, init);
+
+    if (response.status === 401 && !init.anonymous) {
+      const refreshed = await this.refreshOnce();
+      if (!refreshed) {
+        await this.options.tokens.clear();
+        this.options.onUnauthenticated?.();
+        throw await toError(response);
+      }
+
+      const retried = await this.send(path, init);
+      if (!retried.ok) throw await toError(retried);
+      return (await retried.json()) as { data: T; meta: M };
+    }
+
+    if (!response.ok) throw await toError(response);
+    return (await response.json()) as { data: T; meta: M };
+  }
+
   private async send(path: string, init: RequestOptions): Promise<Response> {
     const url = new URL(`${this.options.baseUrl}/v1${path}`);
 

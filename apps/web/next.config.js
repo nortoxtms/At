@@ -21,6 +21,11 @@ const nextConfig = {
   ...(isPreview
     ? {
         output: 'export',
+        // A separate build directory. Without it the preview build overwrites
+        // .next, and `next start` then serves the static export — a production
+        // server quietly handing out the demo dataset. That happened, and it
+        // looked like the search API had broken.
+        distDir: '.next-preview',
         basePath,
         assetPrefix: basePath || undefined,
         // Pages has no image optimizer behind it.

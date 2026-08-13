@@ -4,36 +4,43 @@
 
 ## What it is
 
-The landing page, the pricing page and the seven §24.26 policy documents in
-Turkish and English, exported as plain HTML. It exists so the design system
-(§20), the copy and the legal pages can be read in a browser without standing
-up a database, an API, Stripe or Typesense.
+A working demo of the marketplace, with no server behind it.
 
-Nineteen pages, 1.5 MB, no server.
+Fifty-one pages: the landing page, twelve listings you can browse, filter and
+open, a services index, a job board, the pricing page and the seven §24.26
+policy documents in Turkish and English. Roughly 2 MB, no API, no database, no
+Stripe.
+
+The demo dataset (`apps/web/src/content/demo.ts`) was exported from a running
+instance through the real endpoints, so every field is the shape the API
+actually returns and every page renders the same components against the same
+types. Seller names and handles are replaced with placeholder stables; breeds,
+ages, heights, prices, regions and quality scores are as generated.
+
+The listing detail pages are the production pages, unmodified — `lib/api.ts`
+serves them from the demo dataset under `NEXT_PUBLIC_STATIC_PREVIEW`, so what
+you are looking at is the real page, not a mock-up of it.
 
 ## What it is not
 
-It is not the product, and it does not pretend to be — every page carries a
-banner saying so.
+It is not live, and every page says so in a banner.
 
-GitHub Pages serves static files. The marketplace is server-rendered against a
-live API: search reads a 50 000-document index, listings are fetched per
-request, messaging holds an open connection, and everything behind a login
-needs a session. None of that is a file.
+The browse page is the one deliberate substitution. In production it is a
+server component that reads the query string and asks the search API, because
+§19.2 needs a filtered view to be an indexable URL. A static export has neither
+a server to read the query on nor an API to ask, so the preview swaps in
+`src/preview/routes/atlar/page.tsx`, which filters twelve listings in the
+browser. The filters are real and they work. What they are not is §11's search
+engine: relevance ranking, geo radius, boosted placement and facet counts all
+live in the API and none are reproduced.
 
-So `scripts/build-preview.sh` **removes** those routes from the preview build
-rather than shipping them as permanently empty pages:
+Everything requiring a session is absent rather than stubbed: registration,
+messaging, saving a search, applying to a job, payment. There is no login form
+that goes nowhere.
 
-| Route | Why it is not in the preview |
-|---|---|
-| `/[locale]/atlar`, `/hizmetler`, `/isler` | Read `searchParams`; a page whose job is to answer a query cannot be a file |
-| `/sitemap.xml` | Enumerates live listings; a static copy is stale the moment anything is published |
-| `/robots.txt` | A route handler, and a preview should not be instructing crawlers |
-
-The pricing page **is** included and shows real numbers. It normally reads them
-from the API, and falls back to the same `@only-horses/shared-types` catalogue
-the API derives its answer from — so the preview shows 19 € for Pro because
-that is what Pro costs, not because a number was typed into a template.
+Detail pages for services and jobs are not exported — there is no demo data
+behind them, and a page that renders empty is worse than a page that is not
+there.
 
 ## Publishing it
 
@@ -80,9 +87,31 @@ PAGES_BASE_PATH= bash scripts/build-preview.sh   # no base path when served at /
 npx serve apps/web/out
 ```
 
+The preview builds into `.next-preview`, not `.next`. That separation matters:
+without it the export build overwrites the production build directory, and
+`next start` then serves the static export — a production server quietly
+handing out the demo dataset while looking entirely normal.
+
+Served under a base path, serve the *parent* of the export and visit
+`/<repo>/`; the bundle's asset URLs are prefixed at build time and will not
+resolve from the export root.
+
 `PAGES_BASE_PATH` matters: GitHub serves a project site under `/<repo>`, so the
 CI build passes `/At` and every asset URL is prefixed. Built with the wrong
 base path, the pages load and the CSS does not.
+
+## Checking it
+
+```bash
+node scripts/contrast-audit.mjs http://localhost:4321/At/ http://localhost:4321/At/tr/atlar/
+```
+
+Every rendered text node, its computed colour against the nearest painted
+background, in both colour schemes, against WCAG AA. This exists because the
+dark theme shipped with cream text on a sand ground at 1.27:1 — invisible —
+and no amount of reading the token file would have found it. The Tailwind
+utilities compiled to fixed hex values and never read the theme's CSS
+variables at all.
 
 ## How it relates to the real deployment
 

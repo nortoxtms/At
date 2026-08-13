@@ -58,11 +58,11 @@ export default async function LegalPage({ params }: PageProps) {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <nav className="text-small text-text-secondary mb-8 flex items-center justify-between">
-        <Link href={`/${locale}`} className="hover:text-brass">
+        <Link href={`/${locale}`} className="hover:text-brass-text">
           ONLY HORSES
         </Link>
         {/* §24.26 requires both languages, so every page carries the way to the other one. */}
-        <Link href={`/${other}/${document.path}`} className="hover:text-brass" hrefLang={other}>
+        <Link href={`/${other}/${document.path}`} className="hover:text-brass-text" hrefLang={other}>
           {other === 'en' ? 'English' : 'Türkçe'}
         </Link>
       </nav>
@@ -96,7 +96,7 @@ export default async function LegalPage({ params }: PageProps) {
             const link = legalDocument(locale, slug);
             return link ? (
               <li key={slug}>
-                <Link href={`/${locale}/${link.path}`} className="hover:text-brass">
+                <Link href={`/${locale}/${link.path}`} className="hover:text-brass-text">
                   {link.title}
                 </Link>
               </li>

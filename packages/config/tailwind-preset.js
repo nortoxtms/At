@@ -14,25 +14,57 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Pigments — the same colour in both themes.
         ink: colors.ink,
         leather: { DEFAULT: colors.leather, deep: colors.leatherDeep },
-        // §20: the accent is burnished brass. Not terracotta — that
-        // substitution is what makes an equestrian product read as a generic
-        // warm-neutral template.
-        brass: { DEFAULT: colors.brass, light: colors.brassLight },
-        sand: colors.sand,
         cream: colors.cream,
-        paper: colors.paper,
         success: colors.success,
         warning: colors.warning,
         danger: colors.danger,
         info: colors.info,
-        border: { DEFAULT: colors.border, strong: colors.borderStrong },
+
+        /*
+         * Roles — resolved from the CSS variables in apps/web's globals.css so
+         * they follow the theme.
+         *
+         * These used to be literal hex values from tokens.ts, which meant
+         * `bg-sand` compiled to a fixed light colour while the dark theme
+         * switched body text to cream. Every sand-backed block rendered
+         * invisible text, and no amount of editing the CSS variables could fix
+         * it, because the utilities never read them.
+         *
+         * The `<alpha-value>` placeholder is what keeps `bg-sand/40` and
+         * `border-border/60` working; a hex value cannot carry an opacity
+         * modifier through a variable.
+         */
+        // §20: the accent is burnished brass. Not terracotta — that
+        // substitution is what makes an equestrian product read as a generic
+        // warm-neutral template.
+        brass: {
+          DEFAULT: 'rgb(var(--brass-rgb) / <alpha-value>)',
+          light: colors.brassLight,
+          // For words rather than rules: brass is too light to read on paper.
+          text: 'rgb(var(--brass-text-rgb) / <alpha-value>)',
+        },
+        sand: 'rgb(var(--sand-rgb) / <alpha-value>)',
+        paper: 'rgb(var(--paper-rgb) / <alpha-value>)',
+        surface: 'rgb(var(--surface-rgb) / <alpha-value>)',
+        border: {
+          DEFAULT: 'rgb(var(--border-rgb) / <alpha-value>)',
+          strong: 'rgb(var(--border-strong-rgb) / <alpha-value>)',
+        },
         text: {
-          primary: colors.textPrimary,
-          secondary: colors.textSecondary,
-          muted: colors.textMuted,
-          inverse: colors.textInverse,
+          primary: 'rgb(var(--text-primary-rgb) / <alpha-value>)',
+          secondary: 'rgb(var(--text-secondary-rgb) / <alpha-value>)',
+          muted: 'rgb(var(--text-muted-rgb) / <alpha-value>)',
+          inverse: 'rgb(var(--text-inverse-rgb) / <alpha-value>)',
+          // The status hues, legible as words in both themes. The pigments
+          // above stay available for fills and rules.
+          success: 'rgb(var(--success-text-rgb) / <alpha-value>)',
+          warning: 'rgb(var(--warning-text-rgb) / <alpha-value>)',
+          danger: 'rgb(var(--danger-text-rgb) / <alpha-value>)',
+          info: 'rgb(var(--info-text-rgb) / <alpha-value>)',
+          leather: 'rgb(var(--leather-text-rgb) / <alpha-value>)',
         },
       },
       fontFamily: {

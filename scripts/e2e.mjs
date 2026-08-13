@@ -303,6 +303,10 @@ async function main() {
 
     console.log(bold('3. §19.2 — listing detail, server-rendered'));
     await resultLink.click();
+    // The card is a next/link, so this is a client-side transition: the load
+    // state settles before the URL changes, and asserting on `page.url()`
+    // straight after `networkidle` reads the page you were on.
+    await page.waitForURL(`**/${listing.slug}**`, { timeout: 15_000 });
     await page.waitForLoadState('networkidle');
 
     const url = page.url();

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { HorseTimeline, type TimelineEntry } from '@/components/HorseTimeline';
 
 /**
@@ -70,18 +72,24 @@ export default function HomePage() {
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <a
-              href="/app"
+            {/*
+              §21 makes tr the default locale and every public route lives
+              under it. This said `/atlar`, which is not a route in any locale
+              — the landing page's main call to action was a 404 in production
+              as well as in the preview.
+            */}
+            <Link
+              href="/tr/atlar"
               className="rounded-md bg-brass px-6 py-3 text-body font-medium text-ink transition-opacity hover:opacity-90"
             >
-              Uygulamayı indir
-            </a>
-            <a
-              href="/atlar"
+              Satılık atlara bak
+            </Link>
+            <Link
+              href="/tr/hizmetler"
               className="rounded-md border border-cream/25 px-6 py-3 text-body font-medium text-cream transition-colors hover:bg-cream/10"
             >
-              Satılık atlara bak
-            </a>
+              Hizmet ara
+            </Link>
           </div>
         </div>
       </section>
@@ -125,17 +133,17 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="mx-auto max-w-5xl px-6 py-12">
+      {/*
+        The page-local footer is gone: SiteFooter is in the root layout now, so
+        every page carries the same one. Its links were also wrong — `/gizlilik`
+        and the rest have no locale segment, and `/hakkinda` is not a route at
+        all, so three of the four 404'd.
+      */}
+      <section className="mx-auto max-w-5xl px-6 py-12">
         <p className="text-caption text-text-muted">
           ONLY HORSES bir aracı platformdur, hiçbir satışın tarafı değildir.
         </p>
-        <nav className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-small text-text-secondary">
-          <a href="/hakkinda" className="hover:text-text-primary">Hakkında</a>
-          <a href="/gizlilik" className="hover:text-text-primary">Gizlilik</a>
-          <a href="/kosullar" className="hover:text-text-primary">Koşullar</a>
-          <a href="/refah-politikasi" className="hover:text-text-primary">Refah politikası</a>
-        </nav>
-      </footer>
+      </section>
     </main>
   );
 }

@@ -25,6 +25,17 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const IS_STATIC_PREVIEW = process.env.NEXT_PUBLIC_STATIC_PREVIEW === '1';
 
 /**
+ * The static preview's data source.
+ *
+ * Loaded dynamically so it is code-split: `NEXT_PUBLIC_STATIC_PREVIEW` is
+ * inlined at build time, so in an ordinary build the branch below is
+ * `if (false)` and the dataset never enters the bundle.
+ */
+async function demo() {
+  return import('@/content/demo');
+}
+
+/**
  * What to do when the API cannot be reached.
  *
  * In the static preview: return the empty value, so a page that has an empty
@@ -113,17 +124,27 @@ async function get<T>(path: string, revalidate: number): Promise<T | null> {
   }
 }
 
-export function getListing(slug: string): Promise<ListingDetail | null> {
+export async function getListing(slug: string): Promise<ListingDetail | null> {
+  if (IS_STATIC_PREVIEW) return (await demo()).DEMO_LISTING_DETAIL[slug] ?? null;
   return get<ListingDetail>(`/listings/${encodeURIComponent(slug)}`, 300);
 }
 
-export function getTimeline(listingId: string): Promise<TimelineEntry[] | null> {
+export async function getTimeline(listingId: string): Promise<TimelineEntry[] | null> {
+  // The demo carries no timelines: they belong to a horse record, and the
+  // preview exports listings rather than the registry behind them. The page
+  // already handles an absent timeline, so it renders without one.
+  if (IS_STATIC_PREVIEW) return null;
   return get<TimelineEntry[]>(`/horses/${listingId}/timeline`, 300);
 }
 
 export async function searchListings(
   params: Record<string, string | number | undefined>,
 ): Promise<{ hits: ListingSearchHit[]; total: number }> {
+  if (IS_STATIC_PREVIEW) {
+    const { DEMO_LISTINGS } = await demo();
+    return { hits: DEMO_LISTINGS, total: DEMO_LISTINGS.length };
+  }
+
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== '') search.set(key, String(value));
@@ -278,6 +299,17 @@ async function search<THit>(
   path: string,
   params: Record<string, string | number | undefined>,
 ): Promise<{ hits: THit[]; total: number }> {
+  if (IS_STATIC_PREVIEW) {
+    const dataset = await demo();
+    const hits = (path.startsWith('/services')
+      ? dataset.DEMO_SERVICES
+      : path.startsWith('/jobs')
+        ? dataset.DEMO_JOBS
+        : []) as unknown as THit[];
+
+    return { hits, total: hits.length };
+  }
+
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== '') query.set(key, String(value));

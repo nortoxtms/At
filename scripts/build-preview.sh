@@ -29,12 +29,35 @@ trap 'rm -rf "$WORK"' EXIT
 cp -r "$REPO_ROOT/apps/web" "$WORK/web"
 rm -rf "$WORK/web/node_modules" "$WORK/web/.next" "$WORK/web/out"
 
-# These read `searchParams` or fetch per-request data. Next's static export
-# refuses both, and rightly: a page whose whole job is to answer a query cannot
-# be a file.
+# The marketplace pages read `searchParams`, which a static export refuses —
+# a page whose whole job is to answer a query cannot be a file. Rather than
+# delete them (the first version of this script did, which left a horse
+# marketplace where you could read the terms of service and not look at a
+# horse), swap in the preview variants from src/preview/routes. They render
+# the committed demo dataset and filter it in the browser.
 for ROUTE in atlar hizmetler isler; do
-  rm -rf "$WORK/web/src/app/[locale]/$ROUTE"
+  cp "$WORK/web/src/preview/routes/$ROUTE/page.tsx" "$WORK/web/src/app/[locale]/$ROUTE/page.tsx"
 done
+
+# The listing detail page needs no rewrite: lib/api.ts serves it from the demo
+# dataset under NEXT_PUBLIC_STATIC_PREVIEW, so the preview shows the real page,
+# with the real components, against the real types. It only needs to be told
+# which slugs to emit.
+cat >> "$WORK/web/src/app/[locale]/atlar/[slug]/page.tsx" <<'PARAMS'
+
+// Appended by scripts/build-preview.sh — static export only.
+import { DEMO_LISTINGS as PREVIEW_LISTINGS } from '@/content/demo';
+
+export function generateStaticParams() {
+  return PREVIEW_LISTINGS.flatMap((listing) => [
+    { locale: 'tr', slug: listing.slug },
+    { locale: 'en', slug: listing.slug },
+  ]);
+}
+PARAMS
+
+# Detail routes with no demo data behind them would export as empty pages.
+rm -rf "$WORK/web/src/app/[locale]/hizmetler/[slug]" "$WORK/web/src/app/[locale]/isler/[slug]"
 # The sitemap enumerates live listings; a static copy would go stale the moment
 # anything is published. robots.txt is a route handler, which a static export
 # refuses without `force-static` — and a preview should not be telling crawlers

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import type { ListingSearchHit } from '@only-horses/shared-types';
 
 import { LISTING_TYPE_LABEL_TR, SEX_LABEL_TR } from '@/lib/api';
@@ -34,7 +36,12 @@ export function ListingCard({ hit }: { hit: ListingSearchHit }) {
 
   return (
     <article className="overflow-hidden rounded-lg border border-border bg-paper shadow-card transition-shadow hover:shadow-sheet">
-      <a href={`/tr/atlar/${hit.slug}`} className="block">
+      {/*
+        next/link, not a bare anchor. A hard-coded absolute href skips Next's
+        basePath, so every card on the GitHub Pages build pointed one directory
+        above the site and 404'd.
+      */}
+      <Link href={`/tr/atlar/${hit.slug}`} className="block">
         {/* §20.6 card crop is 3:2. The blurhash stands in until real
             photography is wired through Cloudflare Images. */}
         <div className="aspect-card w-full bg-sand" aria-hidden="true" />
@@ -58,7 +65,7 @@ export function ListingCard({ hit }: { hit: ListingSearchHit }) {
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {hit.sellerVerification !== 'none' && hit.sellerVerification !== 'email_verified' ? (
-              <span className="rounded-full bg-success/10 px-2 py-0.5 text-caption text-success">
+              <span className="rounded-full bg-success/10 px-2 py-0.5 text-caption text-text-success">
                 Doğrulanmış satıcı
               </span>
             ) : null}
@@ -68,13 +75,13 @@ export function ListingCard({ hit }: { hit: ListingSearchHit }) {
               </span>
             ) : null}
             {hit.isBoosted ? (
-              <span className="rounded-full bg-brass/15 px-2 py-0.5 text-caption text-leather">
+              <span className="rounded-full bg-brass/15 px-2 py-0.5 text-caption text-text-leather">
                 Öne çıkarılan
               </span>
             ) : null}
           </div>
         </div>
-      </a>
+      </Link>
     </article>
   );
 }

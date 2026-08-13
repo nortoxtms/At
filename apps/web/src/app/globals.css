@@ -10,55 +10,139 @@
  * The values are generated from packages/shared-types/src/tokens.ts; keep
  * them in sync by editing the token file, not this one.
  */
+/*
+ * Roles are declared as raw RGB channels so Tailwind can apply an opacity
+ * modifier to them — `bg-sand/40` compiles to `rgb(var(--sand-rgb) / 0.4)`,
+ * which a hex value cannot express. The hex aliases below exist for the
+ * hand-written CSS further down this file.
+ */
 :root {
+  /*
+   * Brand pigments. Fixed in both themes — they name a colour, not a role.
+   */
   --ink: #17130f;
   --leather: #4a2f1d;
   --leather-deep: #33200f;
-  --brass: #b4832f;
   --brass-light: #d9ad5c;
-  --sand: #e4d7c2;
   --cream: #f7f2e8;
-  --paper: #ffffff;
 
   --success: #4a6b45;
   --warning: #c2761e;
   --danger: #9b2c1f;
   --info: #3c5a6b;
 
-  --text-primary: #17130f;
-  --text-secondary: #5c5147;
-  --text-muted: #8a7d70;
-  --text-inverse: #f7f2e8;
+  /*
+   * Roles. Only these are redefined by the dark theme.
+   *
+   * The split is the fix for a bug that shipped: `sand` was a pigment that
+   * pages also used as a background, and the dark theme turned body text
+   * cream while every `bg-sand` block stayed light — cream on sand, a
+   * contrast ratio of 1.27:1. Not low contrast, invisible.
+   */
+  --surface-rgb: 247 242 232;
+  --paper-rgb: 255 255 255;
+  --sand-rgb: 228 215 194;
 
-  --border: #dcd0bc;
-  --border-strong: #b9a88e;
+  --text-primary-rgb: 23 19 15;
+  --text-secondary-rgb: 92 81 71;
+  /*
+   * Was #8a7d70 — 2.82:1 on sand, 4.00:1 on white, below WCAG AA's 4.5:1
+   * everywhere it was used. This clears it on the lightest surface it sits on.
+   */
+  --text-muted-rgb: 104 92 80;
+  /*
+   * Paired with `bg-ink` and `bg-leather`, which are pigments and stay dark in
+   * both themes — so this stays cream in both themes. It used to flip to ink
+   * in the dark theme, which rendered the hero heading and the header's call
+   * to action as ink on ink: a contrast ratio of exactly 1:1, invisible.
+   */
+  --text-inverse-rgb: 247 242 232;
 
-  --surface: var(--cream);
+  --brass-rgb: 180 131 47;
+  /*
+   * Brass at #b4832f is 3.37:1 on white: enough for a rule or a fill, not for
+   * words. Text that wants to be brass uses this, and the brand colour stays
+   * what it is.
+   */
+  --brass-text-rgb: 125 90 28;
+
+  /*
+   * The status pigments as *text*. §20.1's values are chosen to be read as
+   * fills and rules; used for words they miss AA on a light surface (warning
+   * at #c2761e is 3.19:1 on cream) and vanish on a dark one (leather at
+   * #4a2f1d is 1.38:1 on dark paper). These are the same hues, adjusted per
+   * theme so the badge still reads.
+   */
+  --success-text-rgb: 58 84 53;
+  --warning-text-rgb: 141 84 14;
+  --danger-text-rgb: 155 44 31;
+  --info-text-rgb: 46 71 86;
+  --leather-text-rgb: 74 47 29;
+
+  --border-rgb: 220 208 188;
+  --border-strong-rgb: 185 168 142;
 }
 
 /* §20.1: ink ground, cream text, brass-light accent, borders at 12% white. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --surface: var(--ink);
-    --paper: #221c17;
-    --text-primary: var(--cream);
-    --text-secondary: #c4b8a8;
-    --text-inverse: var(--ink);
-    --brass: var(--brass-light);
-    --border: rgba(255, 255, 255, 0.12);
-    --border-strong: rgba(255, 255, 255, 0.2);
+    --surface-rgb: 23 19 15;
+    --paper-rgb: 34 28 23;
+    /* The warm secondary surface, dark. Cream text on it is 13.3:1. */
+    --sand-rgb: 46 38 32;
+
+    --text-primary-rgb: 247 242 232;
+    --text-secondary-rgb: 196 184 168;
+    --text-muted-rgb: 162 150 138;
+
+    --brass-rgb: 217 173 92;
+    --brass-text-rgb: 217 173 92;
+
+    --success-text-rgb: 141 178 134;
+    --warning-text-rgb: 226 165 92;
+    --danger-text-rgb: 226 138 126;
+    --info-text-rgb: 138 178 199;
+    --leather-text-rgb: 209 176 150;
+
+    --border-rgb: 61 52 44;
+    --border-strong-rgb: 84 72 61;
   }
 }
 
 :root[data-theme='dark'] {
-  --surface: var(--ink);
-  --paper: #221c17;
-  --text-primary: var(--cream);
-  --text-secondary: #c4b8a8;
-  --text-inverse: var(--ink);
-  --brass: var(--brass-light);
-  --border: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.2);
+  --surface-rgb: 23 19 15;
+  --paper-rgb: 34 28 23;
+  --sand-rgb: 46 38 32;
+
+  --text-primary-rgb: 247 242 232;
+  --text-secondary-rgb: 196 184 168;
+  --text-muted-rgb: 162 150 138;
+
+  --brass-rgb: 217 173 92;
+  --brass-text-rgb: 217 173 92;
+
+  --success-text-rgb: 141 178 134;
+  --warning-text-rgb: 226 165 92;
+  --danger-text-rgb: 226 138 126;
+  --info-text-rgb: 138 178 199;
+  --leather-text-rgb: 209 176 150;
+
+  --border-rgb: 61 52 44;
+  --border-strong-rgb: 84 72 61;
+}
+
+/* Hex aliases for the hand-written rules below, which take no opacity. */
+:root {
+  --surface: rgb(var(--surface-rgb));
+  --paper: rgb(var(--paper-rgb));
+  --sand: rgb(var(--sand-rgb));
+  --brass: rgb(var(--brass-rgb));
+  --text-primary: rgb(var(--text-primary-rgb));
+  --text-secondary: rgb(var(--text-secondary-rgb));
+  --text-muted: rgb(var(--text-muted-rgb));
+  --text-inverse: rgb(var(--text-inverse-rgb));
+  --border: rgb(var(--border-rgb));
+  --border-strong: rgb(var(--border-strong-rgb));
 }
 
 body {

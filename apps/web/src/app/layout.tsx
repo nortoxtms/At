@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 
 import './globals.css';
 import { PreviewBanner } from '@/components/PreviewBanner';
+import { SiteFooter } from '@/components/SiteFooter';
+import { SiteHeader } from '@/components/SiteHeader';
 
 /**
  * §20.2's two faces, self-hosted.
@@ -66,10 +68,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="tr" className={`${fraunces.variable} ${inter.variable}`}>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased flex min-h-screen flex-col">
         {/* Renders only in the GitHub Pages export (scripts/build-preview.sh). */}
         <PreviewBanner />
-        {children}
+        <SiteHeader />
+        <div className="flex-1">{children}</div>
+        <SiteFooter />
       </body>
     </html>
   );

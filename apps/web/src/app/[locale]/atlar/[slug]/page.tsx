@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { HorseTimeline, type TimelineEntry as UiTimelineEntry } from '@/components/HorseTimeline';
@@ -95,7 +96,9 @@ export default async function ListingPage({ params }: PageProps) {
       />
 
       <nav aria-label="Breadcrumb" className="text-small text-text-secondary mb-6">
-        <a href="/tr/atlar" className="hover:text-text-primary">Atlar</a>
+        <Link href="/tr/atlar" className="hover:text-text-primary">
+          Atlar
+        </Link>
         {breed ? (
           <>
             <span className="mx-2">/</span>
@@ -145,9 +148,12 @@ export default async function ListingPage({ params }: PageProps) {
             .filter(Boolean)
             .join(' · ')}
         </p>
-        <a href={`/tr/profil/${listing.seller_handle}`} className="text-small text-brass mt-3 inline-block">
-          Profili gör
-        </a>
+        {/*
+          There is no /tr/profil route — §19.1 lists no public profile page, and
+          the seller's own screens are in the app (§18.2). This linked to a 404;
+          naming the handle is what the page can honestly offer.
+        */}
+        <p className="text-small text-text-muted mt-3">@{listing.seller_handle}</p>
       </section>
 
       {listing.description ? (

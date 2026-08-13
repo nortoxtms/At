@@ -39,6 +39,12 @@ for ROUTE in atlar hizmetler isler; do
   cp "$WORK/web/src/preview/routes/$ROUTE/page.tsx" "$WORK/web/src/app/[locale]/$ROUTE/page.tsx"
 done
 
+# "İlan ver" exists only in the preview. §18.2 puts the publish flow in the
+# app, and the web app has no such route — but the *decisions* it makes are
+# pure functions (§13.2, §14.4), so the preview can run them honestly.
+mkdir -p "$WORK/web/src/app/[locale]/ilan-ver"
+cp "$WORK/web/src/preview/routes/ilan-ver/page.tsx" "$WORK/web/src/app/[locale]/ilan-ver/page.tsx"
+
 # The listing detail page needs no rewrite: lib/api.ts serves it from the demo
 # dataset under NEXT_PUBLIC_STATIC_PREVIEW, so the preview shows the real page,
 # with the real components, against the real types. It only needs to be told
@@ -85,13 +91,30 @@ say "3. Exporting"
 )
 
 say "4. Result"
-# Jekyll would otherwise swallow Next's _next/ directory on Pages.
-touch "$REPO_ROOT/apps/web/out/.nojekyll"
 
-if [ "$OUT" != "$REPO_ROOT/apps/web/out" ]; then
-  rm -rf "$OUT"
-  mv "$REPO_ROOT/apps/web/out" "$OUT"
+# Where the export landed.
+#
+# With the default distDir, `output: 'export'` writes to `out/`. With a custom
+# one — and this build uses `.next-preview` so it cannot clobber the production
+# `.next` — Next writes the export inside that directory instead. Nothing warns
+# about the difference: the build succeeds and `out/` simply is not there,
+# which is how a green local run and a red CI run came from the same script.
+EXPORTED=""
+for CANDIDATE in "$REPO_ROOT/apps/web/out" "$REPO_ROOT/apps/web/.next-preview"; do
+  if [ -f "$CANDIDATE/index.html" ]; then EXPORTED="$CANDIDATE"; break; fi
+done
+
+if [ -z "$EXPORTED" ]; then
+  echo "no static export found — looked for index.html in apps/web/{out,.next-preview}" >&2
+  exit 1
 fi
+
+rm -rf "$OUT"
+mkdir -p "$(dirname "$OUT")"
+cp -r "$EXPORTED" "$OUT"
+
+# Jekyll would otherwise swallow Next's _next/ directory on Pages.
+touch "$OUT/.nojekyll"
 
 find "$OUT" -name '*.html' | sed "s|$OUT||" | sort
 printf '\n\033[32m✓ static preview in %s\033[0m\n' "$OUT"

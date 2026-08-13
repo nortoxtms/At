@@ -19,6 +19,17 @@ const SECTIONS = [
   { href: '/tr/fiyatlandirma', label: 'Fiyatlandırma' },
 ];
 
+/**
+ * Publishing lives in the app (§18.2), so the web app has no such route and
+ * this link would be a dead end. The preview does have one — it runs §13.2 and
+ * §14.4 in the browser without saving anything — so the entry appears only
+ * there.
+ */
+const PREVIEW_SECTIONS =
+  process.env.NEXT_PUBLIC_STATIC_PREVIEW === '1'
+    ? [{ href: '/tr/ilan-ver', label: 'İlan ver' }]
+    : [];
+
 export function SiteHeader() {
   return (
     <header className="border-b border-border bg-paper">
@@ -31,7 +42,7 @@ export function SiteHeader() {
         </Link>
 
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-small">
-          {SECTIONS.map((section) => (
+          {[...SECTIONS, ...PREVIEW_SECTIONS].map((section) => (
             <li key={section.href}>
               <Link href={section.href} className="text-text-secondary hover:text-brass-text">
                 {section.label}

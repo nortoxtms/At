@@ -75,3 +75,26 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+
+      # The static export is a second build target with its own failure modes,
+      # and it broke twice without anyone noticing: once because a custom
+      # distDir moved where Next writes the export, once because the signed-in
+      # routes cannot be exported at all. Both times `pnpm build` was green,
+      # the Pages workflow went red on its own, and the published site quietly
+      # stayed several commits behind while looking fine.
+      #
+      # Running it here means a change that breaks the export fails the same
+      # check as a change that breaks the app, instead of failing somewhere
+      # nobody is looking.
+      - name: Static export (the GitHub Pages target)
+        run: PAGES_BASE_PATH=/At bash scripts/build-preview.sh
+
+      - name: The export must contain the pages it claims to
+        run: |
+          for page in index.html tr/atlar/index.html tr/fiyatlandirma/index.html \
+                      tr/kosullar/index.html tr/ilan-ver/index.html; do
+            test -f "apps/web/out/$page" || { echo "missing $page"; exit 1; }
+          done
+          # A listing detail page proves the demo dataset still renders through
+          # the real page rather than erroring into an empty file.
+          ls apps/web/out/tr/atlar/*/index.html >/dev/null

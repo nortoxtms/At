@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 
-import type { AuthState } from '@/app/[locale]/(hesap)/actions';
+import type { AuthState } from '@/lib/auth-state';
 
 const FIELD =
   'w-full rounded-md border border-border bg-paper px-3 py-2 text-body text-text-primary';

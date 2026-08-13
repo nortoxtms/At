@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 
+import type { AuthState } from '@/lib/auth-state';
 import { apiAs } from '@/lib/authed';
 import { clearSession, writeSession } from '@/lib/session';
 
@@ -14,12 +15,6 @@ import { clearSession, writeSession } from '@/lib/session';
  * server, and the browser never holds a token.
  */
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-
-export interface AuthState {
-  error?: string;
-  /** Field-level messages, keyed by field, from §12's VALIDATION_ERROR details. */
-  fields?: Record<string, string>;
-}
 
 interface AuthResponse {
   data?: { tokens: { accessToken: string; refreshToken: string } };

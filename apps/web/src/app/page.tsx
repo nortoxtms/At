@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { HeroField } from '@/components/HeroField';
 import { HorseTimeline, type TimelineEntry } from '@/components/HorseTimeline';
 
 /**
@@ -55,23 +56,51 @@ const SAMPLE_TIMELINE: TimelineEntry[] = [
 export default function HomePage() {
   return (
     <main>
-      {/* §20.1: ink is the hero surface. §20.6: real photographs only — the
-          image slot stays empty until licensed photography is in place, rather
-          than filling it with an illustration of a horse. */}
-      <section className="bg-ink text-text-inverse">
-        <div className="mx-auto max-w-5xl px-6 py-16 md:py-24">
-          <p className="text-label uppercase text-brass-light mb-4">Türkiye · Beta</p>
+      {/*
+        §20.1 makes ink the hero surface and §20.6 allows real photographs and
+        nothing else — there are none yet, so this builds depth out of light
+        rather than filling the slot with an illustration: a slow field of
+        brass motes, a warm radial wash, and a hairline grid that stops before
+        it becomes a pattern.
+      */}
+      <section className="relative isolate overflow-hidden bg-ink text-text-inverse">
+        <HeroField />
 
-          <h1 className="font-display text-4xl md:text-6xl font-semibold leading-tight max-w-3xl">
-            Atların dünyası tek bir yerde.
-          </h1>
+        {/* A single warm source, off-centre. Flat ink reads as a placeholder;
+            one light gives the surface somewhere to fall away to. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-70"
+          style={{
+            background:
+              'radial-gradient(70rem 40rem at 78% -10%, rgba(217,173,92,0.20), transparent 60%),' +
+              'radial-gradient(50rem 30rem at 8% 110%, rgba(74,47,29,0.55), transparent 65%)',
+          }}
+        />
 
-          <p className="mt-6 text-body md:text-lg max-w-xl text-cream/80">
-            Atının sağlık, nal, aşı ve sahiplik geçmişini tek dosyada tut. Satmak
-            istediğinde ilanın çoktan hazır olsun.
+        <div className="relative mx-auto max-w-6xl px-6 py-24 md:py-36">
+          <p className="text-label uppercase tracking-[0.2em] text-brass-light">
+            Türkiye · Beta
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          {/*
+            The type does the work here. §20.2 reserves Fraunces for display,
+            and this is the one place on the site where it is allowed to be
+            genuinely large — a marketplace that opens quietly reads as a
+            directory.
+          */}
+          <h1 className="font-display mt-6 max-w-4xl text-[clamp(2.5rem,7vw,5.25rem)] font-semibold leading-[0.98] tracking-[-0.02em]">
+            Atların dünyası
+            <br />
+            <span className="text-brass-light">tek bir yerde.</span>
+          </h1>
+
+          <p className="mt-8 max-w-xl text-lg leading-relaxed text-cream/75">
+            Atının sağlık, nal, aşı ve sahiplik geçmişini tek dosyada tut.
+            Satmak istediğinde ilanın çoktan hazır olsun.
+          </p>
+
+          <div className="mt-10 flex flex-wrap items-center gap-3">
             {/*
               §21 makes tr the default locale and every public route lives
               under it. This said `/atlar`, which is not a route in any locale
@@ -80,37 +109,84 @@ export default function HomePage() {
             */}
             <Link
               href="/tr/atlar"
-              className="rounded-md bg-brass px-6 py-3 text-body font-medium text-ink transition-opacity hover:opacity-90"
+              className="group inline-flex items-center gap-2 rounded-full bg-brass px-7 py-3.5 text-body font-medium text-ink transition-transform duration-200 hover:-translate-y-0.5"
             >
               Satılık atlara bak
+              <span
+                aria-hidden="true"
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              >
+                →
+              </span>
             </Link>
             <Link
               href="/tr/hizmetler"
-              className="rounded-md border border-cream/25 px-6 py-3 text-body font-medium text-cream transition-colors hover:bg-cream/10"
+              className="rounded-full border border-cream/25 px-7 py-3.5 text-body font-medium text-cream transition-colors duration-200 hover:border-cream/50 hover:bg-cream/5"
             >
               Hizmet ara
             </Link>
           </div>
+
+          {/* §22's counters, once there are any. Until then this states the
+              two facts that are true on day one and cost nothing to keep. */}
+          <dl className="mt-16 grid max-w-2xl grid-cols-2 gap-x-10 gap-y-6 border-t border-cream/15 pt-8 sm:grid-cols-3">
+            {[
+              ['Komisyon', '%0', 'Satıştan pay alınmaz'],
+              ['Kimlik', 'Zorunlu', 'İlan vermenin koşulu'],
+              ['Kayıt', 'Kalıcı', 'At satılsa da kalır'],
+            ].map(([label, value, note]) => (
+              <div key={label}>
+                <dt className="text-label uppercase tracking-wider text-cream/50">{label}</dt>
+                <dd className="font-display mt-1 text-h2 text-cream">{value}</dd>
+                <dd className="mt-1 text-caption text-cream/55">{note}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
-      {/* §2: the two objects, deliberately separated. Stating this plainly is
-          the clearest way to explain why the product is not a classifieds app. */}
-      <section className="mx-auto max-w-5xl px-6 py-16">
-        <div className="grid gap-8 md:grid-cols-2">
-          <article className="rounded-lg border border-border bg-paper p-6 shadow-card">
-            <p className="text-label uppercase text-text-muted">Kalıcı</p>
-            <h2 className="font-display text-h2 mt-2">At kaydı</h2>
-            <p className="mt-3 text-small text-text-secondary">
+      {/*
+        §2: the two objects, deliberately separated. Stating this plainly is
+        the clearest way to explain why the product is not a classifieds app —
+        so the layout states it too, with the permanent record given the
+        weight and the listing sitting beside it as the smaller, temporary
+        thing.
+      */}
+      <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
+        <p className="text-label uppercase tracking-[0.2em] text-brass-text">İki nesne</p>
+        <h2 className="font-display mt-4 max-w-2xl text-[clamp(1.75rem,3.5vw,2.75rem)] leading-tight tracking-[-0.01em]">
+          Kayıt kalıcıdır. İlan geçicidir.
+        </h2>
+
+        <div className="mt-12 grid gap-6 lg:grid-cols-5">
+          <article className="group relative overflow-hidden rounded-xl border border-border bg-paper p-8 transition-colors duration-300 hover:border-brass/40 lg:col-span-3">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brass/5 transition-transform duration-500 group-hover:scale-125"
+            />
+            <p className="text-label uppercase tracking-wider text-text-muted">Kalıcı</p>
+            <h3 className="font-display text-h1 mt-2">At kaydı</h3>
+            <p className="text-body text-text-secondary mt-4 max-w-md leading-relaxed">
               Mikroçip, pasaport, ırk, doğum tarihi, sağlık ve nal kayıtları,
               yarışma sonuçları, sahiplik geçmişi. At satılsa da kayıt kalır.
             </p>
+
+            <ul className="mt-6 flex flex-wrap gap-2">
+              {['Mikroçip', 'Sağlık dosyası', 'Nal takvimi', 'Sahiplik geçmişi'].map((item) => (
+                <li
+                  key={item}
+                  className="rounded-full border border-border px-3 py-1 text-caption text-text-secondary"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
           </article>
 
-          <article className="rounded-lg border border-border bg-paper p-6 shadow-card">
-            <p className="text-label uppercase text-text-muted">Geçici</p>
-            <h2 className="font-display text-h2 mt-2">İlan</h2>
-            <p className="mt-3 text-small text-text-secondary">
+          <article className="rounded-xl border border-border bg-sand/40 p-8 lg:col-span-2">
+            <p className="text-label uppercase tracking-wider text-text-muted">Geçici</p>
+            <h3 className="font-display text-h1 mt-2">İlan</h3>
+            <p className="text-body text-text-secondary mt-4 leading-relaxed">
               Satılık, kiralık, hisse veya aygır hizmeti. Fiyat, görünürlük ve
               süre. İlan kapanır, atın geçmişi kalır.
             </p>
@@ -120,14 +196,33 @@ export default function HomePage() {
 
       {/* §20.4 signature element. Everything around it stays quiet. */}
       <section className="border-y border-border bg-sand/25">
-        <div className="mx-auto max-w-5xl px-6 py-16">
-          <h2 className="font-display text-h1 mb-2">Bu atın geçmişi</h2>
-          <p className="text-small text-text-secondary mb-10 max-w-lg">
-            Her at kaydı bir zaman çizelgesi taşır. Alıcı ne aldığını görür,
-            satıcı anlattığını kanıtlar.
-          </p>
+        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-20 md:py-28 lg:grid-cols-2 lg:items-center">
+          <div>
+            <p className="text-label uppercase tracking-[0.2em] text-brass-text">Zaman çizelgesi</p>
+            <h2 className="font-display mt-4 text-[clamp(1.75rem,3.5vw,2.75rem)] leading-tight tracking-[-0.01em]">
+              Bu atın geçmişi
+            </h2>
+            <p className="text-body text-text-secondary mt-5 max-w-md leading-relaxed">
+              Her at kaydı bir zaman çizelgesi taşır. Alıcı ne aldığını görür,
+              satıcı anlattığını kanıtlar — ve bu geçmiş, ilan kapandığında da
+              atın yanında kalır.
+            </p>
 
-          <div className="max-w-xl">
+            <Link
+              href="/tr/atlar"
+              className="group mt-8 inline-flex items-center gap-2 text-body text-brass-text"
+            >
+              Örnek kayıtlara bak
+              <span
+                aria-hidden="true"
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              >
+                →
+              </span>
+            </Link>
+          </div>
+
+          <div className="rounded-xl border border-border bg-paper p-6 shadow-card md:p-8">
             <HorseTimeline entries={SAMPLE_TIMELINE} />
           </div>
         </div>

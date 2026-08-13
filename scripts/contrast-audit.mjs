@@ -48,17 +48,42 @@ const AUDIT = () => {
     return (hi + 0.05) / (lo + 0.05);
   };
 
-  // The nearest ancestor that actually paints. A transparent background means
-  // the colour behind it is whatever its parent paints, which is exactly the
-  // chain the browser walks and a token file cannot see.
+  // Composite the background the way the browser does: walk up collecting
+  // every painted layer, then blend them back down. Treating a semi-opaque
+  // layer as "not a background" and skipping to the parent reports the wrong
+  // colour — an ink chip at 85 % over white is a dark grey, not white, and
+  // flagging cream text on it as 1.12:1 is a false alarm that trains you to
+  // ignore the tool.
+  const blend = (top, bottom) => ({
+    r: top.r * top.a + bottom.r * (1 - top.a),
+    g: top.g * top.a + bottom.g * (1 - top.a),
+    b: top.b * top.a + bottom.b * (1 - top.a),
+    a: 1,
+  });
+
   const backgroundOf = (element) => {
+    const layers = [];
     let node = element;
-    while (node && node !== document.documentElement.parentNode) {
+
+    while (node && node.nodeType === 1) {
       const background = parse(getComputedStyle(node).backgroundColor);
-      if (background && background.a > 0.95) return background;
+      if (background && background.a > 0.001) {
+        layers.push(background);
+        if (background.a >= 0.999) break;
+      }
       node = node.parentElement;
     }
-    return { r: 255, g: 255, b: 255, a: 1 };
+
+    // The page's own ground, under everything.
+    let result = layers.length && layers[layers.length - 1].a >= 0.999
+      ? layers.pop()
+      : { r: 255, g: 255, b: 255, a: 1 };
+
+    for (let index = layers.length - 1; index >= 0; index -= 1) {
+      result = blend(layers[index], result);
+    }
+
+    return result;
   };
 
   const findings = [];
@@ -99,7 +124,7 @@ const AUDIT = () => {
     findings.push({
       text: text.slice(0, 60),
       color: style.color,
-      background: `rgb(${background.r} ${background.g} ${background.b})`,
+      background: `rgb(${Math.round(background.r)} ${Math.round(background.g)} ${Math.round(background.b)})`,
       contrast: Number(contrast.toFixed(2)),
       required,
       fontSize: size,

@@ -64,6 +64,12 @@ PARAMS
 
 # Detail routes with no demo data behind them would export as empty pages.
 rm -rf "$WORK/web/src/app/[locale]/hizmetler/[slug]" "$WORK/web/src/app/[locale]/isler/[slug]"
+
+# The signed-in screens need a server: they read an httpOnly cookie, call the
+# API as that person and redirect when there is no session. A static export has
+# no request to read a cookie from, so these are removed rather than shipped as
+# forms that post into nothing.
+rm -rf "$WORK/web/src/app/[locale]/(hesap)"
 # The sitemap enumerates live listings; a static copy would go stale the moment
 # anything is published. robots.txt is a route handler, which a static export
 # refuses without `force-static` — and a preview should not be telling crawlers

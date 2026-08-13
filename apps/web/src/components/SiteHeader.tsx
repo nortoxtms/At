@@ -38,20 +38,31 @@ export async function SiteHeader() {
   const signedIn =
     process.env.NEXT_PUBLIC_STATIC_PREVIEW === '1' ? false : Boolean(await readSession());
 
+  /*
+   * Sticky and translucent. The header is the only navigation on the site, so
+   * it should not scroll away — and `backdrop-blur` keeps it legible over the
+   * ink hero without needing a second, opaque variant of it.
+   */
   return (
-    <header className="border-b border-border bg-paper">
+    <header className="sticky top-0 z-50 border-b border-border bg-paper/85 backdrop-blur-md supports-[backdrop-filter]:bg-paper/70">
       <nav
         aria-label="Ana menü"
         className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4"
       >
-        <Link href="/" className="font-display text-h3 tracking-tight">
+        <Link
+          href="/"
+          className="font-display text-h3 tracking-tight transition-opacity hover:opacity-70"
+        >
           ONLY HORSES
         </Link>
 
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-small">
           {[...SECTIONS, ...PREVIEW_SECTIONS].map((section) => (
             <li key={section.href}>
-              <Link href={section.href} className="text-text-secondary hover:text-brass-text">
+              <Link
+                href={section.href}
+                className="text-text-secondary transition-colors hover:text-brass-text"
+              >
                 {section.label}
               </Link>
             </li>
@@ -62,7 +73,7 @@ export async function SiteHeader() {
           {signedIn ? (
             <Link
               href="/tr/hesap"
-              className="rounded-md bg-ink px-4 py-2 text-text-inverse"
+              className="rounded-full bg-ink px-5 py-2 text-text-inverse transition-transform hover:-translate-y-0.5"
             >
               Hesabım
             </Link>
@@ -73,7 +84,7 @@ export async function SiteHeader() {
               </Link>
               <Link
                 href="/tr/kayit"
-                className="rounded-md bg-ink px-4 py-2 text-text-inverse"
+                className="rounded-full bg-ink px-5 py-2 text-text-inverse transition-transform hover:-translate-y-0.5"
               >
                 Hesap oluştur
               </Link>

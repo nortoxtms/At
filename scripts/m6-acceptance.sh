@@ -25,6 +25,17 @@ CRON_SECRET="${CRON_SECRET:-local-dev-secret-only-not-for-production-32chars}"
 say() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 fail() { printf '\033[31m✗ %s\033[0m\n' "$1"; exit 1; }
 pass() { printf '\033[32m✓ %s\033[0m\n' "$1"; }
+# `curl … | grep -q` is a trap under `set -o pipefail`: grep exits at the first
+# match, curl is still writing, and the resulting EPIPE fails the whole script
+# even though the assertion passed. It only bites once a page grows past the
+# pipe buffer — which is exactly how it surfaced, when the site gained a header
+# and a footer. Fetch first, match second.
+page_contains() {
+  local body
+  body=$(curl -sS "$1") || return 1
+  printf '%s' "$body" | grep -q ${3:-} -- "$2"
+}
+
 json() { python3 -c "import json,sys; d=json.load(sys.stdin); print($1)"; }
 
 register() {
@@ -302,10 +313,10 @@ done
 pass "7 policy documents × 2 languages, each substantive and cross-linked"
 
 # The four §24.26 requires by name must state what they are actually about.
-curl -sS "$WEB/tr/kosullar" | grep -q "komisyon almaz" || fail "the ToS does not state §16.3's no-commission position"
-curl -sS "$WEB/en/gizlilik" | grep -q "30 days" || fail "the privacy policy does not state §24.14's deletion window"
-curl -sS "$WEB/tr/refah-politikasi" | grep -q "6 aydan küçük" || fail "the welfare policy does not carry §14.4's foal rule"
-curl -sS "$WEB/en/cerezler" | grep -qi "no advertising cookies" || fail "the cookie notice is vague about advertising"
+page_contains "$WEB/tr/kosullar" "komisyon almaz" || fail "the ToS does not state §16.3's no-commission position"
+page_contains "$WEB/en/gizlilik" "30 days" || fail "the privacy policy does not state §24.14's deletion window"
+page_contains "$WEB/tr/refah-politikasi" "6 aydan küçük" || fail "the welfare policy does not carry §14.4's foal rule"
+page_contains "$WEB/en/cerezler" "no advertising cookies" -i || fail "the cookie notice is vague about advertising"
 pass "each policy states the rule the code actually enforces"
 
 SITEMAP=$(curl -sS "$WEB/sitemap.xml")

@@ -14,6 +14,17 @@ WEB="${WEB:-http://localhost:3000}"
 say() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 fail() { printf '\033[31m✗ %s\033[0m\n' "$1"; exit 1; }
 pass() { printf '\033[32m✓ %s\033[0m\n' "$1"; }
+# `curl … | grep -q` is a trap under `set -o pipefail`: grep exits at the first
+# match, curl is still writing, and the resulting EPIPE fails the whole script
+# even though the assertion passed. It only bites once a page grows past the
+# pipe buffer — which is exactly how it surfaced, when the site gained a header
+# and a footer. Fetch first, match second.
+page_contains() {
+  local body
+  body=$(curl -sS "$1") || return 1
+  printf '%s' "$body" | grep -q ${3:-} -- "$2"
+}
+
 json() { python3 -c "import json,sys; d=json.load(sys.stdin); print($1)"; }
 
 # ── corpus ─────────────────────────────────────────────────────────────
@@ -209,7 +220,7 @@ URLS=$(grep -c "<loc>" /tmp/oh-sitemap.xml)
 grep -q "atlar/" /tmp/oh-sitemap.xml || fail "sitemap contains no listing URLs"
 pass "sitemap.xml lists $URLS URLs including listings"
 
-curl -sS "$WEB/robots.txt" | grep -q "Sitemap:" || fail "robots.txt does not reference the sitemap"
+page_contains "$WEB/robots.txt" "Sitemap:" || fail "robots.txt does not reference the sitemap"
 pass "robots.txt points at the sitemap"
 
 printf '\n\033[32m✓ M2 acceptance complete\033[0m\n'

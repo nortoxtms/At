@@ -15,6 +15,11 @@ on:
     paths:
       - 'apps/web/**'
       - 'packages/shared-types/**'
+      # The design tokens and the Tailwind preset live here (§20.1), so a
+      # palette or type-scale change is a change to every published page. It
+      # was missing from this list, which meant exactly those changes were the
+      # ones that would not republish.
+      - 'packages/config/**'
       - 'scripts/build-preview.sh'
       - '.github/workflows/pages.yml'
   workflow_dispatch:

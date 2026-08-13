@@ -197,6 +197,10 @@ export class PostgresSearchProvider implements SearchProvider {
     if (query.minRating !== undefined) {
       clauses.push(`(document->>'rating_average')::float >= ${clauses.bind(query.minRating)}`);
     }
+    // §24.13, for services: the provider is the person who was blocked.
+    if (query.excludeProfileIds?.length) {
+      clauses.push(`document->>'provider_id' <> ALL(${clauses.bind(query.excludeProfileIds)})`);
+    }
 
     return this.queryCollection<ServiceSearchHit>({
       collection: 'services',
@@ -374,6 +378,10 @@ export class PostgresSearchProvider implements SearchProvider {
       clauses.push(
         `COALESCE((document->>'years_experience')::int, 0) >= ${clauses.bind(query.minYearsExperience)}`,
       );
+    }
+    // §24.13, for the directory: the document *is* the person.
+    if (query.excludeProfileIds?.length) {
+      clauses.push(`document->>'id' <> ALL(${clauses.bind(query.excludeProfileIds)})`);
     }
 
     return this.queryCollection<ProfessionalSearchHit>({
@@ -589,6 +597,13 @@ export class PostgresSearchProvider implements SearchProvider {
       clauses.push(`document->>'seller_verification' = 'business_verified'`);
     } else if (query.sellerType === 'individual') {
       clauses.push(`document->>'seller_verification' <> 'business_verified'`);
+    }
+
+    // §24.13: a blocked seller's listings disappear for the blocker. Applied
+    // as a filter rather than at render time so the counts, the facets and the
+    // pagination all agree with what is shown.
+    if (query.excludeProfileIds?.length) {
+      clauses.push(`document->>'seller_id' <> ALL(${push(query.excludeProfileIds)})`);
     }
 
     return { where: clauses.join(' AND '), params };

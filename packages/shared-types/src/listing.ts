@@ -117,6 +117,15 @@ export const listingSearchSchema = z.object({
   trialAllowed: booleanParam.optional(),
   ppeWelcome: booleanParam.optional(),
 
+
+  /**
+   * §24.13: "Blocking a user removes them from search results and hides their
+   * listings from the blocker." Set by the API from the viewer's own block
+   * list — never from client input, which is why it is not documented as a
+   * filter. A client that sends it can only hide results from itself.
+   */
+  excludeProfileIds: z.array(z.string().uuid()).max(500).optional(),
+
   sort: z
     .enum(['recommended', 'newest', 'price_asc', 'price_desc', 'distance', 'most_viewed'])
     .default('recommended'),

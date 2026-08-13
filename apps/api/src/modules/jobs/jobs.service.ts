@@ -242,7 +242,7 @@ export class JobsService {
   /** §12 GET /jobs/:slug — public; §19.1 renders it server-side for SEO. */
   async findByIdOrSlug(idOrSlug: string, viewerId: string | null): Promise<Record<string, unknown>> {
     const sql = `SELECT j.id, j.slug, j.title, j.description, j.responsibilities, j.requirements,
-                        j.job_type, j.roles_needed, j.disciplines,
+                        j.job_type, j.roles_needed::text[] AS roles_needed, j.disciplines,
                         j.country_code, j.region, j.city,
                         j.salary_min, j.salary_max, j.salary_currency, j.salary_period,
                         j.salary_public, j.accommodation, j.meals_included, j.visa_support,

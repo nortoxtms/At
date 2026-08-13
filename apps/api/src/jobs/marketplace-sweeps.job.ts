@@ -4,6 +4,7 @@ import { DatabaseService } from '../database/database.service.js';
 import { AccessGrantsService } from '../modules/access-grants/access-grants.service.js';
 import { JobsService } from '../modules/jobs/jobs.service.js';
 import { NotificationsService } from '../modules/notifications/notifications.service.js';
+import { PrivacyService } from '../modules/privacy/privacy.service.js';
 
 /**
  * The hourly marketplace sweep.
@@ -15,7 +16,8 @@ import { NotificationsService } from '../modules/notifications/notifications.ser
  *   · §13.6 — applications auto-close when their job expires;
  *   · §2    — health file grants are time-limited, so they must actually end;
  *   · §17   — `review.prompt`, 48 h after a listing closed;
- *   · §16.1 — boosts are sold by the day, so they have to stop.
+ *   · §16.1 — boosts are sold by the day, so they have to stop;
+ *   · §24.14 — a deletion request erases when its 30 days are up.
  *
  * The grant sweep existed since M3 with no caller, which meant "time-limited"
  * was true in the database and decorative in practice. It has one now.
@@ -29,6 +31,7 @@ export class MarketplaceSweepsJob {
     private readonly jobs: JobsService,
     private readonly grants: AccessGrantsService,
     private readonly notifications: NotificationsService,
+    private readonly privacy: PrivacyService,
   ) {}
 
   async run(): Promise<{
@@ -37,11 +40,14 @@ export class MarketplaceSweepsJob {
     expiredGrants: number;
     reviewPrompts: number;
     expiredBoosts: number;
+    erasures: number;
   }> {
     const jobs = await this.jobs.closeExpiredJobs();
     const expiredGrants = await this.grants.expireLapsed();
     const reviewPrompts = await this.promptForReviews();
     const expiredBoosts = await this.expireBoosts();
+    // §24.14: deletion requests whose 30 days have run out.
+    const erasures = await this.privacy.runDueErasures();
 
     this.logger.log(
       `Sweep: ${jobs.applications} application(s), ${expiredGrants} grant(s), ` +
@@ -54,6 +60,7 @@ export class MarketplaceSweepsJob {
       expiredGrants,
       reviewPrompts,
       expiredBoosts,
+      erasures: erasures.erased,
     };
   }
 

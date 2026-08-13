@@ -22,6 +22,8 @@ import { ServicesModule } from './modules/services/services.module.js';
 import { JobBoardModule } from './modules/jobs/jobs.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { BillingModule } from './modules/billing/billing.module.js';
+import { SavedModule } from './modules/saved/saved.module.js';
+import { PrivacyModule } from './modules/privacy/privacy.module.js';
 import { MediaModule } from './modules/media/media.module.js';
 import { SearchModule } from './modules/search/search.module.js';
 import { ProfilesModule } from './modules/profiles/profiles.module.js';
@@ -60,6 +62,8 @@ import { ReferenceModule } from './modules/reference/reference.module.js';
     JobBoardModule,
     ReviewsModule,
     BillingModule,
+    SavedModule,
+    PrivacyModule,
     VerificationModule,
     AccessGrantsModule,
     ModerationModule,

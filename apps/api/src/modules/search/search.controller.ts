@@ -8,9 +8,10 @@ import {
 } from '@only-horses/shared-types';
 import { timingSafeEqual } from 'node:crypto';
 
-import { Public } from '../../common/guards/auth.guard.js';
+import { CurrentProfileId, OptionalAuth, Public } from '../../common/guards/auth.guard.js';
 import { RateLimit, RateLimitGuard } from '../../common/guards/rate-limit.guard.js';
 import type { Env } from '../../config/env.js';
+import { DatabaseService } from '../../database/database.service.js';
 import { SearchIndexerService } from './search-indexer.service.js';
 import { SEARCH_PROVIDER, type SearchProvider } from './search.provider.js';
 import { Inject } from '@nestjs/common';
@@ -23,13 +24,43 @@ export class SearchController {
     @Inject(SEARCH_PROVIDER) private readonly search: SearchProvider,
     private readonly indexer: SearchIndexerService,
     private readonly config: ConfigService<Env, true>,
+    private readonly db: DatabaseService,
   ) {}
 
+  /**
+   * §24.13: "Blocking a user removes them from search results, hides their
+   * listings from the blocker."
+   *
+   * Read as the viewer, which is the only scope that works: `blocks_select`
+   * deliberately shows a user the blocks *they* made and not the ones made
+   * against them (being able to enumerate who blocked you is a harassment
+   * vector — migration 0036 makes the same argument).
+   *
+   * A guest blocks nobody, so an anonymous search skips the query entirely.
+   */
+  private async blockedBy(profileId: string | null): Promise<string[] | undefined> {
+    if (!profileId) return undefined;
+
+    const rows = await this.db.queryAs<{ blocked_id: string }>(
+      profileId,
+      `SELECT blocked_id FROM blocks WHERE blocker_id = $1 LIMIT 500`,
+      [profileId],
+    );
+
+    return rows.length > 0 ? rows.map((row) => row.blocked_id) : undefined;
+  }
+
   @Get('listings/search')
-  @Public()
+  @OptionalAuth()
   @RateLimit({ limit: 120, windowSeconds: 60, per: 'profile' })
-  async searchListings(@Query() rawQuery: Record<string, unknown>) {
+  async searchListings(
+    @Query() rawQuery: Record<string, unknown>,
+    @CurrentProfileId() profileId: string | null,
+  ) {
+    // Parsed first, then the exclusion is attached: it is server state, not a
+    // filter a client gets to choose.
     const query = listingSearchSchema.parse(normalizeArrays(rawQuery));
+    query.excludeProfileIds = await this.blockedBy(profileId);
     const result = await this.search.searchListings(query);
 
     return {
@@ -55,10 +86,14 @@ export class SearchController {
    * "search" and every query would 404 as a missing job.
    */
   @Get('services/search')
-  @Public()
+  @OptionalAuth()
   @RateLimit({ limit: 120, windowSeconds: 60, per: 'profile' })
-  async searchServices(@Query() rawQuery: Record<string, unknown>) {
+  async searchServices(
+    @Query() rawQuery: Record<string, unknown>,
+    @CurrentProfileId() profileId: string | null,
+  ) {
     const query = serviceSearchSchema.parse(normalizeArrays(rawQuery));
+    query.excludeProfileIds = await this.blockedBy(profileId);
     return envelope(await this.search.searchServices(query));
   }
 
@@ -71,10 +106,14 @@ export class SearchController {
   }
 
   @Get('professionals/search')
-  @Public()
+  @OptionalAuth()
   @RateLimit({ limit: 120, windowSeconds: 60, per: 'profile' })
-  async searchProfessionals(@Query() rawQuery: Record<string, unknown>) {
+  async searchProfessionals(
+    @Query() rawQuery: Record<string, unknown>,
+    @CurrentProfileId() profileId: string | null,
+  ) {
     const query = professionalSearchSchema.parse(normalizeArrays(rawQuery));
+    query.excludeProfileIds = await this.blockedBy(profileId);
     return envelope(await this.search.searchProfessionals(query));
   }
 

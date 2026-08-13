@@ -225,7 +225,12 @@ export class SearchIndexerService {
    */
   private async buildJobDocuments(ids: string[]): Promise<SearchDocument[]> {
     const rows = await this.db.query<Record<string, unknown>>(
-      `SELECT j.id, j.slug, j.title, j.description, j.job_type, j.roles_needed, j.disciplines,
+      // roles_needed is cast to text[]: node-pg returns an array of a custom
+      // enum type as the raw string "{rider,groom}", which indexed the roles
+      // as a JSON string and made §18.2 S17's role filter match nothing
+      // (migration 0049).
+      `SELECT j.id, j.slug, j.title, j.description, j.job_type,
+              j.roles_needed::text[] AS roles_needed, j.disciplines,
               j.country_code, j.region, j.city,
               j.salary_min, j.salary_max, j.salary_currency, j.salary_period, j.salary_public,
               j.accommodation, j.meals_included, j.visa_support,
@@ -370,6 +375,7 @@ export class SearchIndexerService {
               h.disciplines, h.training_level, h.rider_level_min,
               h.breed_id, h.location_precision,
               b.group_code AS breed_group,
+              p.id AS seller_id,
               p.verification_level AS seller_verification,
               p.trust_score AS seller_trust_score,
               -- §11.3: filtering is on EUR; the original currency is kept for
@@ -438,6 +444,7 @@ export class SearchIndexerService {
         geo: row.lat === null || row.lat === undefined
           ? null
           : [Number(row.lat), Number(row.lng)],
+        seller_id: (row.seller_id as string) ?? '',
         seller_verification: (row.seller_verification as string) ?? 'none',
         seller_trust_score: Number(row.seller_trust_score ?? 0),
         has_video: Boolean(row.has_video),

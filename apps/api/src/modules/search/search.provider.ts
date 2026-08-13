@@ -44,6 +44,8 @@ export interface ListingDocument extends SearchDocument {
   region: string;
   city: string;
   geo: [number, number] | null;
+  /** §24.13: the filter that hides a blocked seller needs an id to match on. */
+  seller_id: string;
   seller_verification: string;
   seller_trust_score: number;
   has_video: boolean;

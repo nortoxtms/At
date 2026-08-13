@@ -66,6 +66,7 @@ export class TypesenseSearchProvider implements SearchProvider {
       { name: 'region', type: 'string', facet: true, optional: true },
       { name: 'city', type: 'string', facet: true, optional: true },
       { name: 'geo', type: 'geopoint', optional: true },
+      { name: 'seller_id', type: 'string', facet: true },
       { name: 'seller_verification', type: 'string', facet: true },
       { name: 'seller_trust_score', type: 'int32' },
       { name: 'has_video', type: 'bool', facet: true },
@@ -100,7 +101,7 @@ export class TypesenseSearchProvider implements SearchProvider {
       { name: 'title', type: 'string' },
       { name: 'description', type: 'string', optional: true },
       { name: 'category', type: 'string', facet: true },
-      { name: 'provider_id', type: 'string', index: false },
+      { name: 'provider_id', type: 'string', facet: true },
       { name: 'provider_name', type: 'string' },
       { name: 'provider_verification', type: 'string', facet: true },
       { name: 'provider_trust_score', type: 'int32' },
@@ -274,6 +275,9 @@ export class TypesenseSearchProvider implements SearchProvider {
         'provider_verification:=[identity_verified,professional_verified,business_verified]',
       );
     }
+    if (query.excludeProfileIds?.length) {
+      filters.push(`provider_id:!=[${query.excludeProfileIds.join(',')}]`);
+    }
     pushLocationFilters(filters, query);
 
     const sort = {
@@ -399,6 +403,9 @@ export class TypesenseSearchProvider implements SearchProvider {
     }
     if (query.verifiedOnly) {
       filters.push('verification_level:=[identity_verified,professional_verified,business_verified]');
+    }
+    if (query.excludeProfileIds?.length) {
+      filters.push(`id:!=[${query.excludeProfileIds.join(',')}]`);
     }
     pushLocationFilters(filters, query);
 
@@ -529,6 +536,11 @@ export class TypesenseSearchProvider implements SearchProvider {
 
     if (query.lat !== undefined && query.lng !== undefined && query.radiusKm) {
       filters.push(`geo:(${query.lat}, ${query.lng}, ${query.radiusKm} km)`);
+    }
+
+    // §24.13.
+    if (query.excludeProfileIds?.length) {
+      filters.push(`seller_id:!=[${query.excludeProfileIds.join(',')}]`);
     }
 
     return filters;

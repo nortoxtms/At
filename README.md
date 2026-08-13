@@ -25,9 +25,13 @@ Each milestone's Definition of Done (§23) has an executable check —
 | **M3 — Trust & messaging** | Done · `scripts/m3-acceptance.sh` |
 | **M4 — Services, jobs, reviews** | Done · `scripts/m4-acceptance.sh` |
 | **M5 — Monetization** | Done · `scripts/m5-acceptance.sh` |
-| M6 — Polish & launch | Not started |
+| M6 — Polish & launch | In progress · `scripts/m6-acceptance.sh` · see [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) |
 
-Known gaps, stated plainly: the Typesense adapter has never been run
+M6's DoD is "§24 fully green", and it is not: **19 of 29 criteria are verified,
+7 are implemented but unmeasured, and 3 need a released app and production
+traffic.** [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) walks all 29 with evidence.
+
+Other known gaps, stated plainly: the Typesense adapter has never been run
 (ADR-0005, ADR-0006) and the measured search numbers are Postgres's; the Stripe
 adapter has never been run either (ADR-0007) and needs one pass against Stripe
 test mode before launch; the mobile app has never been built on iOS or Android

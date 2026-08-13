@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 import { searchJobs, searchListings, searchServices } from '@/lib/api';
+import { LEGAL_SLUGS, legalDocument } from '@/content/legal';
 
 /**
  * Sitemap — spec §19.2.
@@ -25,10 +26,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${appUrl}/tr/hizmetler`, changeFrequency: 'daily', priority: 0.7 },
     { url: `${appUrl}/tr/isler`, changeFrequency: 'daily', priority: 0.7 },
     { url: `${appUrl}/tr/fiyatlandirma`, changeFrequency: 'monthly', priority: 0.5 },
-    { url: `${appUrl}/tr/hakkinda`, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${appUrl}/tr/gizlilik`, changeFrequency: 'yearly', priority: 0.2 },
-    { url: `${appUrl}/tr/kosullar`, changeFrequency: 'yearly', priority: 0.2 },
-    { url: `${appUrl}/tr/refah-politikasi`, changeFrequency: 'yearly', priority: 0.3 },
+    // §24.26: every policy page, in both languages, each pointing at the other.
+    ...LEGAL_SLUGS.flatMap((slug) =>
+      (['tr', 'en'] as const)
+        .map((locale) => ({ locale, document: legalDocument(locale, slug) }))
+        .filter((entry) => entry.document !== null)
+        .map((entry) => ({
+          url: `${appUrl}/${entry.locale}/${entry.document!.path}`,
+          changeFrequency: 'yearly' as const,
+          priority: 0.3,
+          alternates: {
+            languages: {
+              tr: `${appUrl}/tr/${entry.document!.path}`,
+              en: `${appUrl}/en/${entry.document!.path}`,
+            },
+          },
+        })),
+    ),
   ];
 
   const [{ hits }, services, jobs] = await Promise.all([

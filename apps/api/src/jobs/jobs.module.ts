@@ -1,12 +1,15 @@
 import { Module } from '@nestjs/common';
 
 import { AccessGrantsModule } from '../modules/access-grants/access-grants.module.js';
+import { SearchModule } from '../modules/search/search.module.js';
+import { PrivacyModule } from '../modules/privacy/privacy.module.js';
 import { JobBoardModule } from '../modules/jobs/jobs.module.js';
 import { NotificationsModule } from '../modules/notifications/notifications.module.js';
 import { HealthRemindersController } from './health-reminders.controller.js';
 import { HealthRemindersJob } from './health-reminders.job.js';
 import { MarketplaceSweepsController } from './marketplace-sweeps.controller.js';
 import { MarketplaceSweepsJob } from './marketplace-sweeps.job.js';
+import { SavedSearchAlertsJob } from './saved-search-alerts.job.js';
 
 /**
  * Background jobs (spec §5 `apps/api/src/jobs`).
@@ -18,9 +21,9 @@ import { MarketplaceSweepsJob } from './marketplace-sweeps.job.js';
  * §13.1 expiry sweep land in M2.
  */
 @Module({
-  imports: [JobBoardModule, AccessGrantsModule, NotificationsModule],
+  imports: [JobBoardModule, AccessGrantsModule, NotificationsModule, SearchModule, PrivacyModule],
   controllers: [HealthRemindersController, MarketplaceSweepsController],
-  providers: [HealthRemindersJob, MarketplaceSweepsJob],
-  exports: [HealthRemindersJob, MarketplaceSweepsJob],
+  providers: [HealthRemindersJob, MarketplaceSweepsJob, SavedSearchAlertsJob],
+  exports: [HealthRemindersJob, MarketplaceSweepsJob, SavedSearchAlertsJob],
 })
 export class JobsModule {}

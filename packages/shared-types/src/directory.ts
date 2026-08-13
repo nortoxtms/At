@@ -27,6 +27,14 @@ export const professionalSearchSchema = z.object({
   verifiedOnly: booleanParam.optional(),
   minRating: z.coerce.number().min(1).max(5).optional(),
   minYearsExperience: z.coerce.number().int().min(0).max(60).optional(),
+
+  /**
+   * §24.13: "Blocking a user removes them from search results and hides their
+   * listings from the blocker." Set by the API from the viewer's own block
+   * list — never from client input, which is why it is not documented as a
+   * filter. A client that sends it can only hide results from itself.
+   */
+  excludeProfileIds: z.array(z.string().uuid()).max(500).optional(),
   sort: z.enum(['recommended', 'rating', 'distance', 'newest']).default('recommended'),
   ...pagingParams,
 });

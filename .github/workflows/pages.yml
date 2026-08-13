@@ -36,9 +36,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No `version:` here. The root package.json pins `packageManager`, and
+      # action-setup refuses when it is told the version twice.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
@@ -47,16 +47,19 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Before the build, not after: the build needs this step's base_url, and
+      # this is also where "Pages is not enabled for this repository" surfaces —
+      # better as the first failure than after a five-minute build.
+      - uses: actions/configure-pages@v5
+        id: pages
+
       - name: Build the static preview
         # The repository is served at https://<user>.github.io/<repo>/, so the
         # bundle has to know its own base path or every asset 404s.
         run: bash scripts/build-preview.sh
         env:
           PAGES_BASE_PATH: /${{ github.event.repository.name }}
-          NEXT_PUBLIC_APP_URL: ${{ steps.pages.outputs.base_url || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
-
-      - uses: actions/configure-pages@v5
-        id: pages
+          NEXT_PUBLIC_APP_URL: ${{ steps.pages.outputs.base_url }}
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -35,8 +35,8 @@ to the stated threshold · ❌ not possible in this environment.
 
 | # | Criterion | State | Notes |
 |---|---|---|---|
-| 15 | API p95 < 300 ms reads / < 800 ms writes at 200 concurrent | ⚠️ | Single-user reads measure in the low tens of ms, but **no load test has been run** — §27 names k6 and it has not been used. The number that matters here is unmeasured. |
-| 16 | Search p95 < 200 ms with 50k listings | ⚠️ | Measured at **9–12 ms with 500 listings** (`m2-acceptance.sh`). The 50k corpus has never been built, and the production engine is Typesense, which has never run here (ADR-0005). |
+| 15 | API p95 < 300 ms reads / < 800 ms writes at 200 concurrent | ⚠️ | **Measured, and it is a hardware verdict rather than a code one.** `scripts/perf.mjs` at 200 concurrent users: writes pass (`PATCH /horses` p95 286 ms, `POST /saved` p95 267 ms, budget 800 ms), the cheap reads pass (`/me` 161 ms, `/reference/breeds` 207 ms), and the two expensive ones do not (`/listings/:slug` 628 ms, search 2.1–4.8 s). Service time with one user shows why: 3–31 ms per request, all well inside budget. This box has **4 cores shared by the API, PostgreSQL and the load generator**, so 200 concurrent searching users saturate it and the excess is queueing, not work. The number is honest and it is not the production number — that needs the Cloud Run sizing in `docs/DEPLOY.md` and a generator on a separate host. §27 names k6, which cannot be installed here; `scripts/perf.mjs` is the equivalent written against Node's HTTP client, and it biases *upward*. |
+| 16 | Search p95 < 200 ms with 50k listings | ✅ | **p95 161 ms over 64 queries against 50 000 indexed listings** (`m2-acceptance.sh`, single client). Building the corpus is what exposed the problem: free-text search was an unindexed `ILIKE '%q%'` over JSONB, measuring 9–12 ms at the 500 listings previously seeded and **over 20 s p95 at 50 000 under load**. Migrations 0052/0053 and a rewritten facet pass fixed it (ADR-0008). Still on the Postgres fallback; Typesense has never run here (ADR-0005). |
 | 17 | Mobile cold start < 2.5 s on a mid-tier Android | ❌ | No Android SDK, no Xcode, no device. The mobile app type-checks; it has never been built or launched. |
 | 18 | Web LCP < 2.5 s on 4G for listing detail | ⚠️ | Pages are server-rendered with ISR and ship ~102 kB of shared JS, which is the right shape — but no Lighthouse run against a throttled connection has been done. |
 | 19 | Crash-free sessions > 99.5 % over 7 days | ❌ | Requires a released app and real users. |
@@ -65,7 +65,18 @@ to the stated threshold · ❌ not possible in this environment.
 
 ## Summary
 
-**19 of 29 verified. 7 implemented but unmeasured. 3 impossible here.**
+**20 of 29 verified. 6 implemented but unmeasured. 3 impossible here.**
+
+§24.16 moved to verified after the 50 000-listing corpus was actually built —
+which is worth stating plainly, because building it is what turned a criterion
+that *looked* comfortably met at 9–12 ms into a p95 above twenty seconds. The
+seeded corpus was two orders of magnitude too small to be evidence of
+anything, and every measurement taken against it was true and useless.
+
+§24.15 moved from "unmeasured" to "measured and partly failing", which is not
+the same as regressing: the load test now exists, and what it reports is that
+four shared cores cannot serve 200 concurrent users searching a 50 000-row
+index. That is a sizing input for `docs/DEPLOY.md`, not a defect.
 
 The three impossible ones (§24.17, §24.19, §24.20, §24.29 — four counting store
 review) all need a released mobile app and production traffic. Nothing in the
@@ -73,9 +84,11 @@ codebase blocks them.
 
 The seven unmeasured ones split into two groups:
 
-- **Needs a load generator and a corpus** — §24.15, §24.16, §24.18. k6,
-  a 50k-listing index and a Lighthouse run are each a day's work and none of
-  them are blocked by anything.
+- **Needs hardware, not work** — §24.15. The generator exists
+  (`scripts/perf.mjs`) and the run is reproducible; it needs a machine that is
+  not also running the database.
+- **Needs a browser harness** — §24.18's Lighthouse run. Chromium is installed;
+  nothing blocks this but the writing of it.
 - **Needs test-writing** — §24.21's API-side 70 % and §24.22's browser E2E.
   This is the honest weak point of the build: the business *rules* are
   thoroughly tested, and the NestJS *plumbing* around them is covered only by

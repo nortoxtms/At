@@ -52,6 +52,12 @@ jobs:
       # better as the first failure than after a five-minute build.
       - uses: actions/configure-pages@v5
         id: pages
+        with:
+          # Turns Pages on for the repository if it is off, using the job's
+          # `pages: write` permission — so the site does not need someone to
+          # visit Settings first. Requires a public repository, or a plan that
+          # allows Pages on a private one.
+          enablement: true
 
       - name: Build the static preview
         # The repository is served at https://<user>.github.io/<repo>/, so the

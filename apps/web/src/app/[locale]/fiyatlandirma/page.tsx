@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { PLAN_FEATURES, planOptions, PRODUCTS } from '@only-horses/shared-types';
+
 import { getPlans } from '@/lib/api';
 
 /**
@@ -10,6 +12,15 @@ import { getPlans } from '@/lib/api';
  * static page is a price that disagrees with Stripe the first time it changes.
  */
 export const revalidate = 3600;
+
+/**
+ * §19.1's locale segment is `tr | en`. Enumerating them here is what lets the
+ * static preview (scripts/build-preview.sh) emit this page as a file; the
+ * Cloud Run build ignores it and renders on demand.
+ */
+export function generateStaticParams() {
+  return [{ locale: 'tr' }, { locale: 'en' }];
+}
 
 export const metadata: Metadata = {
   title: 'Fiyatlandırma',
@@ -25,18 +36,16 @@ const TIER_LABEL: Record<string, string> = {
 };
 
 export default async function PricingPage() {
-  const catalogue = await getPlans();
-
-  if (!catalogue) {
-    return (
-      <main className="mx-auto max-w-3xl px-6 py-16 text-center">
-        <h1 className="font-display text-h1">Fiyatlandırma</h1>
-        <p className="text-small text-text-secondary mt-3">
-          Planlar şu anda yüklenemedi. Birazdan tekrar dene.
-        </p>
-      </main>
-    );
-  }
+  // The API is the source of truth so a price change needs no redeploy, but
+  // the catalogue is the same shared-types data the API derives its answer
+  // from — so an unreachable API falls back to identical numbers rather than
+  // to an apology. This is also what makes the static preview show real
+  // prices (docs/PREVIEW.md).
+  const catalogue = (await getPlans()) ?? {
+    plans: planOptions(),
+    features: PLAN_FEATURES,
+    products: PRODUCTS,
+  };
 
   const monthly = catalogue.plans.filter((plan) => plan.interval === 'month');
   const yearly = catalogue.plans.filter((plan) => plan.interval === 'year');

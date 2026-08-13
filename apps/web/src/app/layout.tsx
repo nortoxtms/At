@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
 import './globals.css';
+import { PreviewBanner } from '@/components/PreviewBanner';
 
 /**
  * §19.2 requires hreflang for tr/en/es/de with x-default, and §21 makes tr the
@@ -46,7 +47,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {/* Renders only in the GitHub Pages export (scripts/build-preview.sh). */}
+        <PreviewBanner />
+        {children}
+      </body>
     </html>
   );
 }

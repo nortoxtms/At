@@ -70,17 +70,25 @@ export interface TimelineEntry {
 }
 
 async function get<T>(path: string, revalidate: number): Promise<T | null> {
-  const response = await fetch(`${API_URL}/v1${path}`, {
-    // §19.2: ISR with revalidate 300 for listing pages, with on-demand
-    // revalidation on publish/edit/close layered on top.
-    next: { revalidate },
-    headers: { accept: 'application/json' },
-  });
+  try {
+    const response = await fetch(`${API_URL}/v1${path}`, {
+      // §19.2: ISR with revalidate 300 for listing pages, with on-demand
+      // revalidation on publish/edit/close layered on top.
+      next: { revalidate },
+      headers: { accept: 'application/json' },
+    });
 
-  if (!response.ok) return null;
+    if (!response.ok) return null;
 
-  const body = (await response.json()) as { data: T };
-  return body.data;
+    const body = (await response.json()) as { data: T };
+    return body.data;
+  } catch {
+    // An unreachable API is a null, not a crash. It happens in exactly two
+    // situations that both want a rendered empty state rather than a 500: the
+    // static preview build (docs/PREVIEW.md), and an API deploy that briefly
+    // drops connections while the page cache is warm.
+    return null;
+  }
 }
 
 export function getListing(slug: string): Promise<ListingDetail | null> {
@@ -99,19 +107,23 @@ export async function searchListings(
     if (value !== undefined && value !== '') search.set(key, String(value));
   }
 
-  const response = await fetch(`${API_URL}/v1/listings/search?${search}`, {
-    next: { revalidate: 300 },
-    headers: { accept: 'application/json' },
-  });
+  try {
+    const response = await fetch(`${API_URL}/v1/listings/search?${search}`, {
+      next: { revalidate: 300 },
+      headers: { accept: 'application/json' },
+    });
 
-  if (!response.ok) return { hits: [], total: 0 };
+    if (!response.ok) return { hits: [], total: 0 };
 
-  const body = (await response.json()) as {
-    data: ListingSearchHit[];
-    meta: { total: number };
-  };
+    const body = (await response.json()) as {
+      data: ListingSearchHit[];
+      meta: { total: number };
+    };
 
-  return { hits: body.data, total: body.meta.total };
+    return { hits: body.data, total: body.meta.total };
+  } catch {
+    return { hits: [], total: 0 };
+  }
 }
 
 /** §9.4: cm is stored; hands are a display choice. */
@@ -249,15 +261,21 @@ async function search<THit>(
     if (value !== undefined && value !== '') query.set(key, String(value));
   }
 
-  const response = await fetch(`${API_URL}/v1${path}?${query}`, {
-    next: { revalidate: 300 },
-    headers: { accept: 'application/json' },
-  });
+  try {
+    const response = await fetch(`${API_URL}/v1${path}?${query}`, {
+      next: { revalidate: 300 },
+      headers: { accept: 'application/json' },
+    });
 
-  if (!response.ok) return { hits: [], total: 0 };
+    if (!response.ok) return { hits: [], total: 0 };
 
-  const body = (await response.json()) as { data: THit[]; meta: { total: number } };
-  return { hits: body.data, total: body.meta.total };
+    const body = (await response.json()) as { data: THit[]; meta: { total: number } };
+    return { hits: body.data, total: body.meta.total };
+  } catch {
+    // Same reasoning as `get`: the empty state is already written and says
+    // something useful, which beats a build failure or a 500.
+    return { hits: [], total: 0 };
+  }
 }
 
 export function searchJobs(

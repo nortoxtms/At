@@ -1,0 +1,73 @@
+name: Static preview (GitHub Pages)
+
+# Publishes the landing page, the pricing page and the §24.26 policy pages as
+# static HTML so the design system and the copy can be looked at in a browser.
+#
+# This is a preview, not a deployment. The marketplace is server-rendered
+# against a live API — search, listings, messaging and everything behind a
+# login need the Cloud Run setup in docs/DEPLOY.md. scripts/build-preview.sh
+# removes those routes rather than shipping pages that would be permanently
+# empty, and the published pages carry a banner saying so.
+
+on:
+  push:
+    branches: [claude/only-horses-full-spec-ech40x]
+    paths:
+      - 'apps/web/**'
+      - 'packages/shared-types/**'
+      - 'scripts/build-preview.sh'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One publish at a time. Never cancel one in flight: a half-published site is
+# worse than an old one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the static preview
+        # The repository is served at https://<user>.github.io/<repo>/, so the
+        # bundle has to know its own base path or every asset 404s.
+        run: bash scripts/build-preview.sh
+        env:
+          PAGES_BASE_PATH: /${{ github.event.repository.name }}
+          NEXT_PUBLIC_APP_URL: ${{ steps.pages.outputs.base_url || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+
+      - uses: actions/configure-pages@v5
+        id: pages
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -78,6 +78,7 @@ export default function ProfileScreen() {
               { label: 'İş ilanları', icon: 'briefcase-outline', href: '/isler' },
               { label: 'Uzmanlar', icon: 'ribbon-outline', href: '/uzmanlar' },
               { label: 'Kaydedilenler', icon: 'bookmark-outline', href: '/kaydedilenler' },
+              { label: 'Planlar', icon: 'card-outline', href: '/planlar' },
               { label: 'Hakkında', icon: 'information-circle-outline', href: '/hakkinda' },
             ]}
           />
@@ -173,7 +174,9 @@ export default function ProfileScreen() {
           items={[
             { label: 'Ahırım', icon: 'home-outline', href: '/ahir' },
             { label: 'İlanlarım', icon: 'list-outline', href: '/ilanlarim' },
+            { label: 'Bildirimler', icon: 'notifications-outline', href: '/bildirimler' },
             { label: 'Kaydedilenler', icon: 'bookmark-outline', href: '/kaydedilenler' },
+            { label: 'Aramalarım', icon: 'search-outline', href: '/aramalarim' },
             { label: 'Hizmetler', icon: 'construct-outline', href: '/hizmetler' },
             { label: 'İş ilanları', icon: 'briefcase-outline', href: '/isler' },
             { label: 'Uzmanlar', icon: 'ribbon-outline', href: '/uzmanlar' },

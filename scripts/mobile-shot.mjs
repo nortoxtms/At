@@ -13,13 +13,24 @@
  *
  *   node scripts/mobile-shot.mjs <base-url> <route> [more routes...]
  */
+import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
 import { chromium } from 'playwright';
 
-const CHROME =
-  process.env.CHROME_PATH ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+/**
+ * Where Chromium is.
+ *
+ * This container ships one at a fixed path and tells Playwright to skip its
+ * own download; CI installs Playwright's instead. So: use CHROME_PATH if it
+ * is set and real, otherwise the container's copy if it exists, otherwise let
+ * Playwright resolve its own. Passing a path that does not exist fails with
+ * ENOENT rather than falling back.
+ */
+const CANDIDATE =
+  process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const LAUNCH = existsSync(CANDIDATE) ? { executablePath: CANDIDATE } : {};
 
 const OUT = process.env.SHOT_DIR ?? '/tmp/mobile-shots';
 
@@ -31,7 +42,7 @@ if (!base || routes.length === 0) {
 
 await mkdir(OUT, { recursive: true });
 
-const browser = await chromium.launch({ executablePath: CHROME });
+const browser = await chromium.launch(LAUNCH);
 const context = await browser.newContext({
   // iPhone 14 logical size — §20.3's measurements are drawn for this width.
   viewport: { width: 390, height: 844 },

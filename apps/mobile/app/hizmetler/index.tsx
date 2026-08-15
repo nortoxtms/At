@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { FlatList, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Badge } from '@/components/ListingCard';
@@ -60,6 +60,11 @@ export default function ServicesScreen() {
             />
           }
           renderItem={({ item }) => (
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={item.title}
+              onPress={() => router.push(`/hizmetler/${item.slug}`)}
+            >
             <Card style={{ gap: 4 }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.space.sm }}>
                 <Txt variant="h3" style={{ flex: 1 }} numberOfLines={2}>
@@ -77,6 +82,7 @@ export default function ServicesScreen() {
                 {formatServicePrice(item)}
               </Txt>
             </Card>
+            </Pressable>
           )}
         />
       )}

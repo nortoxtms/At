@@ -8,7 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ListingCard } from '@/components/ListingCard';
 import { Txt } from '@/components/Text';
 import { Chip, DemoNotice, EmptyState, Loading } from '@/components/ui';
+import { api } from '@/lib/api';
 import { LISTING_TYPES, searchListings, type ListingFilters } from '@/lib/catalog';
+import { useSession } from '@/lib/session';
 import { useAsync, useDebounced } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
@@ -36,7 +38,9 @@ export default function SearchScreen() {
     maxPriceEur?: string;
   }>();
 
+  const { me } = useSession();
   const [text, setText] = useState(params.q ?? '');
+  const [savedSearch, setSavedSearch] = useState<'idle' | 'saving' | 'saved'>('idle');
   const query = useDebounced(text);
 
   const filters = useMemo<ListingFilters>(
@@ -70,6 +74,29 @@ export default function SearchScreen() {
 
   const setParam = (key: string, value: string | undefined) => {
     router.setParams({ ...params, [key]: value ?? '' } as never);
+  };
+
+  /**
+   * §24.5: saving the search is what subscribes to the alert. The name is
+   * derived from the filters rather than asked for — a modal asking "what
+   * shall we call this?" is the step at which people abandon.
+   */
+  const saveSearch = async () => {
+    if (!me) return router.push('/auth');
+
+    setSavedSearch('saving');
+
+    const name =
+      [filters.q, filters.type ? LISTING_TYPE_LABEL_TR[filters.type] : null, filters.region]
+        .filter(Boolean)
+        .join(' · ') || 'Tüm ilanlar';
+
+    const result = await api('/saved-searches', {
+      method: 'POST',
+      body: JSON.stringify({ name: name.slice(0, 80), entity: 'listings', query: filters }),
+    });
+
+    setSavedSearch(result.ok ? 'saved' : 'idle');
   };
 
   return (
@@ -173,9 +200,49 @@ export default function SearchScreen() {
           ListHeaderComponent={
             <View style={{ gap: theme.space.md, paddingVertical: theme.space.lg }}>
               {data?.source === 'demo' ? <DemoNotice /> : null}
-              <Txt variant="small" color={theme.color.textSecondary} display={false}>
-                {hits.length} ilan
-              </Txt>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Txt variant="small" color={theme.color.textSecondary} display={false}>
+                  {hits.length} ilan
+                </Txt>
+
+                <Pressable
+                  accessibilityRole="button"
+                  // The label matches what the control says. A hidden name
+                  // that differs from the visible one ("Bu aramayı kaydet" for
+                  // a button reading "Aramayı kaydet") means a voice-control
+                  // user cannot say what they can see.
+                  accessibilityLabel={
+                    savedSearch === 'saved'
+                      ? 'Kaydedildi'
+                      : savedSearch === 'saving'
+                        ? 'Kaydediliyor'
+                        : 'Aramayı kaydet'
+                  }
+                  disabled={savedSearch !== 'idle'}
+                  onPress={() => void saveSearch()}
+                  hitSlop={8}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 5,
+                    minHeight: theme.metric.minTouchTarget,
+                  }}
+                >
+                  <Ionicons
+                    name={savedSearch === 'saved' ? 'notifications' : 'notifications-outline'}
+                    size={15}
+                    color={theme.color.goldSoft}
+                  />
+                  <Txt variant="small" color={theme.color.goldSoft} display={false}>
+                    {savedSearch === 'saved'
+                      ? 'Kaydedildi'
+                      : savedSearch === 'saving'
+                        ? 'Kaydediliyor…'
+                        : 'Aramayı kaydet'}
+                  </Txt>
+                </Pressable>
+              </View>
             </View>
           }
           ItemSeparatorComponent={() => (

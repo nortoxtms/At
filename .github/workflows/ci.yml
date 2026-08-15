@@ -98,3 +98,67 @@ jobs:
           # A listing detail page proves the demo dataset still renders through
           # the real page rather than erroring into an empty file.
           ls apps/web/out/tr/atlar/*/index.html >/dev/null
+
+  # The mobile app is the half of the product that cannot be run here — no
+  # simulator, no device. What it does have is Expo's web target: the same
+  # React tree, the same components, the same tokens, rendered by
+  # react-native-web. That is not proof the native build works and is not
+  # claimed to be. What it catches is what actually breaks most of the time —
+  # a screen that throws, a route that does not resolve, text the same colour
+  # as its background, a layout that overflows a 390 pt viewport.
+  mobile:
+    name: Mobile (Expo web export)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @only-horses/shared-types build
+      - run: pnpm --filter @only-horses/demo-content build
+      - run: pnpm --filter @only-horses/mobile typecheck
+
+      # A bundle that fails to build is the failure this catches first; the
+      # app typechecks happily with a route that Metro cannot resolve.
+      - name: Export the app for web
+        working-directory: apps/mobile
+        run: npx expo export --platform web
+
+      - name: Install Chromium for Playwright
+        run: npx --yes playwright@1.49.1 install --with-deps chromium
+
+      - name: Serve the export
+        run: npx --yes serve -s -l 4400 apps/mobile/dist &
+
+      - name: Every screen renders, and none of them logs an error
+        run: |
+          npx --yes wait-on http://localhost:4400 --timeout 60000
+          node scripts/mobile-shot.mjs http://localhost:4400/ \
+            / /onboarding /auth /auth/rol /auth/parola /ara /filtreler \
+            /ahir /ahir/yeni /ilan-ver /ilanlarim /kaydedilenler /aramalarim \
+            /bildirimler /hizmetler /isler /uzmanlar /planlar /hakkinda \
+            /dogrulama /ayarlar /bildir /mesajlar /profil
+
+      # §18.3's floor, measured rather than asserted. AUDIT_SETTLE_MS is not
+      # optional here: a client-rendered app's first frame is a splash screen
+      # on a black ground, and auditing that passes everything.
+      - name: WCAG AA, on every screen
+        env:
+          AUDIT_SETTLE_MS: '2500'
+        run: |
+          node scripts/contrast-audit.mjs \
+            http://localhost:4400/ http://localhost:4400/ara \
+            http://localhost:4400/onboarding http://localhost:4400/auth \
+            http://localhost:4400/auth/rol http://localhost:4400/filtreler \
+            http://localhost:4400/ahir http://localhost:4400/ahir/yeni \
+            http://localhost:4400/ilan-ver http://localhost:4400/ilanlarim \
+            http://localhost:4400/kaydedilenler http://localhost:4400/aramalarim \
+            http://localhost:4400/bildirimler http://localhost:4400/hizmetler \
+            http://localhost:4400/isler http://localhost:4400/uzmanlar \
+            http://localhost:4400/planlar http://localhost:4400/hakkinda \
+            http://localhost:4400/dogrulama http://localhost:4400/ayarlar \
+            http://localhost:4400/bildir http://localhost:4400/mesajlar \
+            http://localhost:4400/profil

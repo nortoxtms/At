@@ -7,6 +7,7 @@ import { ListingCard } from '@/components/ListingCard';
 import { Txt } from '@/components/Text';
 import { Wordmark } from '@/components/Wordmark';
 import { DemoNotice, EmptyState, Loading } from '@/components/ui';
+import { api } from '@/lib/api';
 import { searchListings } from '@/lib/catalog';
 import { useAsync } from '@/lib/useAsync';
 import { useSession } from '@/lib/session';
@@ -42,6 +43,14 @@ export default function HomeScreen() {
   const { me } = useSession();
 
   const { data, loading } = useAsync(() => searchListings(), []);
+
+  const { data: unreadCount } = useAsync(async () => {
+    if (!me) return 0;
+    const result = await api<{ readAt: string | null }[]>('/notifications?unreadOnly=true&limit=50');
+    return result.ok && Array.isArray(result.data) ? result.data.length : 0;
+  }, [me?.id]);
+
+  const unread = unreadCount ?? 0;
   const listings = data?.data ?? [];
   const featured = listings.filter((hit) => hit.isBoosted).slice(0, 6);
   const feed = listings.filter((hit) => !hit.isBoosted);
@@ -61,15 +70,54 @@ export default function HomeScreen() {
         }}
       >
         <Wordmark size="small" />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Kaydedilenler"
-          onPress={() => router.push('/kaydedilenler')}
-          hitSlop={12}
-          style={{ minHeight: theme.metric.minTouchTarget, justifyContent: 'center' }}
-        >
-          <Ionicons name="bookmark-outline" size={22} color={theme.color.textSecondary} />
-        </Pressable>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space.lg }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              unread > 0 ? `Bildirimler, ${unread} okunmamış` : 'Bildirimler'
+            }
+            onPress={() => router.push('/bildirimler')}
+            hitSlop={12}
+            style={{ minHeight: theme.metric.minTouchTarget, justifyContent: 'center' }}
+          >
+            <Ionicons name="notifications-outline" size={22} color={theme.color.textSecondary} />
+            {/*
+              §21's badge is a count, not a dot. "You have something" sends
+              people in to find one stale reminder; "7" is a reason to go.
+            */}
+            {unread > 0 ? (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 4,
+                  right: -6,
+                  minWidth: 18,
+                  height: 18,
+                  paddingHorizontal: 5,
+                  borderRadius: 9,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: theme.color.goldSoft,
+                }}
+              >
+                <Txt variant="caption" display={false} color={theme.color.textOnGold}>
+                  {unread > 9 ? '9+' : unread}
+                </Txt>
+              </View>
+            ) : null}
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Kaydedilenler"
+            onPress={() => router.push('/kaydedilenler')}
+            hitSlop={12}
+            style={{ minHeight: theme.metric.minTouchTarget, justifyContent: 'center' }}
+          >
+            <Ionicons name="bookmark-outline" size={22} color={theme.color.textSecondary} />
+          </Pressable>
+        </View>
       </View>
 
       {me ? (

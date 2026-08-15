@@ -16,10 +16,22 @@
  *
  *   node scripts/contrast-audit.mjs http://localhost:4321/At/ [more urls...]
  */
+import { existsSync } from 'node:fs';
+
 import { chromium } from 'playwright';
 
-const CHROME =
-  process.env.CHROME_PATH ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+/**
+ * Where Chromium is.
+ *
+ * This container ships one at a fixed path and tells Playwright to skip its
+ * own download; CI installs Playwright's instead. So: use CHROME_PATH if it
+ * is set and real, otherwise the container's copy if it exists, otherwise let
+ * Playwright resolve its own. Passing a path that does not exist fails with
+ * ENOENT rather than falling back.
+ */
+const CANDIDATE =
+  process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const LAUNCH = existsSync(CANDIDATE) ? { executablePath: CANDIDATE } : {};
 
 /** Milliseconds to wait after load before auditing (see below). */
 const SETTLE_MS = Number(process.env.AUDIT_SETTLE_MS ?? 0);
@@ -138,7 +150,7 @@ const AUDIT = () => {
   return findings;
 };
 
-const browser = await chromium.launch({ executablePath: CHROME });
+const browser = await chromium.launch(LAUNCH);
 let failures = 0;
 
 for (const scheme of ['light', 'dark']) {

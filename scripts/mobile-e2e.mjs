@@ -15,10 +15,22 @@
  *
  *   node scripts/mobile-e2e.mjs http://localhost:4400
  */
+import { existsSync } from 'node:fs';
+
 import { chromium } from 'playwright';
 
-const CHROME =
-  process.env.CHROME_PATH ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+/**
+ * Where Chromium is.
+ *
+ * This container ships one at a fixed path and tells Playwright to skip its
+ * own download; CI installs Playwright's instead. So: use CHROME_PATH if it
+ * is set and real, otherwise the container's copy if it exists, otherwise let
+ * Playwright resolve its own. Passing a path that does not exist fails with
+ * ENOENT rather than falling back.
+ */
+const CANDIDATE =
+  process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const LAUNCH = existsSync(CANDIDATE) ? { executablePath: CANDIDATE } : {};
 
 const base = (process.argv[2] ?? 'http://localhost:4400').replace(/\/$/, '');
 const stamp = Date.now();
@@ -26,7 +38,7 @@ const email = `mobile-e2e-${stamp}@onlyhorses.test`;
 const password = 'e2e-password-123';
 const horseName = `Ekran ${stamp % 100000}`;
 
-const browser = await chromium.launch({ executablePath: CHROME });
+const browser = await chromium.launch(LAUNCH);
 const context = await browser.newContext({
   viewport: { width: 390, height: 844 },
   deviceScaleFactor: 1,
@@ -251,6 +263,47 @@ if (registered) {
     await go('/mesajlar');
     const empty = await page.getByText('Kutun boş').count();
     if (empty > 0) throw new Error('the inbox is empty after sending a message');
+  });
+
+  await step('a saved search is created and listed with its alert', async () => {
+    await go('/ara');
+    await page.getByRole('button', { name: 'Aramayı kaydet', exact: true }).first().click();
+    await page.waitForTimeout(2500);
+    await go('/aramalarim');
+    const empty = await page.getByText('Kayıtlı araman yok').count();
+    if (empty > 0) throw new Error('the saved search did not reach the account');
+    await expectScreen('Her taramada');
+  });
+
+  await step('notifications open and can be read', async () => {
+    await go('/bildirimler');
+    // Either there is something or the empty state says so; a blank screen is
+    // the failure this catches.
+    await expectScreen('Bildirim');
+  });
+
+  await step('a job opens and can be applied to', async () => {
+    await go('/isler');
+    await page.getByRole('link').first().click();
+    await page.waitForTimeout(2500);
+    await expectScreen('İş tanımı');
+    await byLabel('Ön yazı').fill(
+      'Iki yildir nalbant yaninda calisiyorum, saha ziyaretlerine alisigim ve ehliyetim var.',
+    );
+    await tap('Başvuruyu gönder');
+    await page.waitForTimeout(3000);
+    await expectScreen('Başvurun gönderildi');
+  });
+
+  await step('a service opens and messages its provider', async () => {
+    await go('/hizmetler');
+    await page.getByRole('link').first().click();
+    await page.waitForTimeout(2500);
+    await expectScreen('Açıklama');
+    await byLabel('Mesaj').fill('Merhaba, önümüzdeki hafta nakliye için uygun musunuz?');
+    await tap('Gönder');
+    await page.waitForTimeout(3000);
+    if (!page.url().includes('/mesajlar/')) throw new Error('the service enquiry opened no thread');
   });
 
   await step('my listings is empty and points at the stable', async () => {

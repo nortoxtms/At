@@ -5,7 +5,7 @@ import {
 } from '@only-horses/shared-types';
 import type { JobSearchHit } from '@only-horses/shared-types';
 import { useRouter } from 'expo-router';
-import { FlatList, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Badge } from '@/components/ListingCard';
@@ -66,6 +66,11 @@ export default function JobsScreen() {
             />
           }
           renderItem={({ item }) => (
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={item.title}
+              onPress={() => router.push(`/isler/${item.slug}`)}
+            >
             <Card style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.space.sm }}>
                 <Txt variant="h3" style={{ flex: 1 }} numberOfLines={2}>
@@ -95,6 +100,7 @@ export default function JobsScreen() {
                 ) : null}
               </View>
             </Card>
+            </Pressable>
           )}
         />
       )}

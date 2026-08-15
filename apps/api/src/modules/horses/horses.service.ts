@@ -9,6 +9,7 @@ import type {
 import { ApiException } from '../../common/filters/api-exception.filter.js';
 import { DatabaseService } from '../../database/database.service.js';
 import { EntitlementsService } from '../entitlements/entitlements.service.js';
+import { MediaService } from '../media/media.service.js';
 
 /**
  * Horses — the permanent record (spec §2, §7, §12).
@@ -45,6 +46,7 @@ export class HorsesService {
   constructor(
     private readonly db: DatabaseService,
     private readonly entitlements: EntitlementsService,
+    private readonly media: MediaService,
   ) {}
 
   /** §12 GET /me/horses — the My Stable list (§18.2 S09). */
@@ -695,8 +697,16 @@ export class HorsesService {
       [horseId, isOwner],
     );
 
+    // §10: signed, short-lived, and issued only after the visibility filter
+    // above has already decided what this viewer may see.
+    const urls = await this.media.createViewUrls(
+      rows.map((row) => row.media_id),
+      viewerId,
+    );
+
     return rows.map((row) => ({
       mediaId: row.media_id,
+      url: urls.get(row.media_id) ?? null,
       category: row.category,
       sortOrder: row.sort_order,
       visibility: row.visibility,

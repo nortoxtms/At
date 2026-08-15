@@ -186,6 +186,40 @@ if (registered) {
     await expectScreen('sağlık kaydı varsayılan olarak gizlidir');
   });
 
+  await step('uploading a photo attaches it to the horse', async () => {
+    await go('/ahir');
+    await tap(horseName);
+    await page.waitForTimeout(2500);
+
+    // §10.1's picker is native; the file chooser is what stands in for it on
+    // web, and the three-step upload behind it is the same code either way.
+    const chooser = page.waitForEvent('filechooser', { timeout: 15_000 });
+    await tap('Galeri');
+    (await chooser).setFiles({
+      name: 'at.png',
+      mimeType: 'image/png',
+      // A 1×1 PNG: the pipeline is what is under test, not the picture.
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        'base64',
+      ),
+    });
+
+    await page.waitForTimeout(7000);
+
+    // react-native-web's `Image` is not an `<img>` — it paints the source onto
+    // a nested element's background — so the check is the labelled frame plus
+    // the signed URL behind it, not a tag name.
+    const frames = await page.locator('[aria-label="At fotoğrafı"]').count();
+    if (frames === 0) throw new Error('no photo frame rendered after the upload');
+
+    const painted = await page.evaluate(() => {
+      const frame = document.querySelector('[aria-label="At fotoğrafı"]');
+      return frame ? /media\/local-download|storage\.googleapis/.test(frame.innerHTML) : false;
+    });
+    if (!painted) throw new Error('the photo frame has no image behind it');
+  });
+
   await step('saving a listing persists to the account', async () => {
     await go('/ara');
     await page.getByRole('link').first().click();

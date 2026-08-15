@@ -79,6 +79,7 @@ export class LocalStorageProvider implements StorageProvider {
     return {
       uploadUrl: uploadUrl.toString(),
       storageKey,
+      method: 'POST',
       headers: { 'content-type': mimeType },
       expiresAt: new Date(expiresAt),
     };

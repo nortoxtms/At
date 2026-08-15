@@ -1,13 +1,12 @@
-import { Ionicons } from "@expo/vector-icons";
-import { LISTING_TYPE_LABEL_TR } from "@only-horses/shared-types";
-import type { ListingSearchHit } from "@only-horses/shared-types";
-import { Image } from "expo-image";
-import { useRouter } from "expo-router";
-import { Pressable, View } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
+import { LISTING_TYPE_LABEL_TR } from '@only-horses/shared-types';
+import type { ListingSearchHit } from '@only-horses/shared-types';
+import { useRouter } from 'expo-router';
+import { Image, Pressable, View } from 'react-native';
 
-import { Txt } from "@/components/Text";
-import { describeHorse, formatPrice, washFromBlurhash } from "@/lib/format";
-import { theme } from "@/theme/tokens";
+import { Txt } from '@/components/Text';
+import { describeHorse, formatPrice, washFromBlurhash } from '@/lib/format';
+import { theme } from '@/theme/tokens';
 
 /**
  * The listing card — §20.6 and screens 5–6 of the mockup.
@@ -29,24 +28,24 @@ import { theme } from "@/theme/tokens";
  */
 export function ListingCard({
   hit,
-  shape = "feed",
+  shape = 'feed',
 }: {
   hit: ListingSearchHit;
-  shape?: "feed" | "row";
+  shape?: 'feed' | 'row';
 }) {
   const router = useRouter();
   const wash = washFromBlurhash(hit.coverBlurhash);
   const price = formatPrice(hit.priceAmount, hit.priceCurrency, hit.priceType);
 
-  if (shape === "row") {
+  if (shape === 'row') {
     return (
       <Pressable
         accessibilityRole="link"
         accessibilityLabel={`${hit.horseName}, ${price}`}
         onPress={() => router.push(`/ilan/${hit.slug}`)}
         style={({ pressed }) => ({
-          flexDirection: "row",
-          alignItems: "center",
+          flexDirection: 'row',
+          alignItems: 'center',
           gap: theme.space.md,
           minHeight: theme.metric.listRowHeight,
           paddingVertical: theme.space.xs,
@@ -59,15 +58,11 @@ export function ListingCard({
             height: theme.metric.listRowThumb,
             borderRadius: theme.radius.md,
             backgroundColor: wash,
-            overflow: "hidden",
+            overflow: 'hidden',
           }}
         >
           {hit.coverImage ? (
-            <Image
-              source={{ uri: hit.coverImage }}
-              style={{ flex: 1 }}
-              contentFit="cover"
-            />
+            <Image source={{ uri: hit.coverImage }} style={{ flex: 1 }} resizeMode="cover" />
           ) : null}
         </View>
 
@@ -75,26 +70,13 @@ export function ListingCard({
           <Txt variant="h3" numberOfLines={1}>
             {hit.horseName}
           </Txt>
-          <Txt
-            variant="small"
-            color={theme.color.textSecondary}
-            numberOfLines={1}
-          >
+          <Txt variant="small" color={theme.color.textSecondary} numberOfLines={1}>
             {describeHorse(hit)}
           </Txt>
-          <Txt
-            variant="small"
-            color={theme.color.textSecondary}
-            numberOfLines={1}
-          >
-            {[hit.city, hit.region].filter(Boolean).join(", ")}
+          <Txt variant="small" color={theme.color.textSecondary} numberOfLines={1}>
+            {[hit.city, hit.region].filter(Boolean).join(', ')}
           </Txt>
-          <Txt
-            variant="body"
-            display
-            weight="semibold"
-            color={theme.color.goldSoft}
-          >
+          <Txt variant="body" display weight="semibold" color={theme.color.goldSoft}>
             {price}
           </Txt>
         </View>
@@ -118,7 +100,7 @@ export function ListingCard({
       onPress={() => router.push(`/ilan/${hit.slug}`)}
       style={({ pressed }) => ({
         borderRadius: theme.radius.lg,
-        overflow: "hidden",
+        overflow: 'hidden',
         backgroundColor: theme.color.surface,
         borderWidth: 1,
         borderColor: theme.color.border,
@@ -127,25 +109,19 @@ export function ListingCard({
     >
       <View style={{ aspectRatio: 4 / 3, backgroundColor: wash }}>
         {hit.coverImage ? (
-          <Image
-            source={{ uri: hit.coverImage }}
-            style={{ flex: 1 }}
-            contentFit="cover"
-          />
+          <Image source={{ uri: hit.coverImage }} style={{ flex: 1 }} resizeMode="cover" />
         ) : null}
 
         <View
           style={{
-            position: "absolute",
+            position: 'absolute',
             top: theme.space.md,
             left: theme.space.md,
-            flexDirection: "row",
+            flexDirection: 'row',
             gap: theme.space.sm,
           }}
         >
-          <Badge
-            label={LISTING_TYPE_LABEL_TR[hit.listingType] ?? hit.listingType}
-          />
+          <Badge label={LISTING_TYPE_LABEL_TR[hit.listingType] ?? hit.listingType} />
           {hit.hasVideo ? <Badge label="Video" /> : null}
           {hit.hasXray ? <Badge label="Röntgen" /> : null}
         </View>
@@ -154,38 +130,25 @@ export function ListingCard({
       <View style={{ padding: theme.space.lg, gap: 2 }}>
         <View
           style={{
-            flexDirection: "row",
-            alignItems: "baseline",
-            justifyContent: "space-between",
+            flexDirection: 'row',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
             gap: theme.space.sm,
           }}
         >
           <Txt variant="h2" numberOfLines={1} style={{ flex: 1 }}>
             {hit.horseName}
           </Txt>
-          <Txt
-            variant="h3"
-            display
-            weight="semibold"
-            color={theme.color.goldSoft}
-          >
+          <Txt variant="h3" display weight="semibold" color={theme.color.goldSoft}>
             {price}
           </Txt>
         </View>
 
-        <Txt
-          variant="small"
-          color={theme.color.textSecondary}
-          numberOfLines={1}
-        >
+        <Txt variant="small" color={theme.color.textSecondary} numberOfLines={1}>
           {describeHorse(hit)}
         </Txt>
-        <Txt
-          variant="small"
-          color={theme.color.textSecondary}
-          numberOfLines={1}
-        >
-          {[hit.city, hit.region].filter(Boolean).join(", ")}
+        <Txt variant="small" color={theme.color.textSecondary} numberOfLines={1}>
+          {[hit.city, hit.region].filter(Boolean).join(', ')}
         </Txt>
       </View>
     </Pressable>

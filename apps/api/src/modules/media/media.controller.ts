@@ -99,6 +99,14 @@ export class MediaController {
   @Get('local-download')
   @Public()
   @Header('cache-control', 'private, no-store')
+  // helmet sets `Cross-Origin-Resource-Policy: same-origin` on everything,
+  // which is right for JSON and wrong for an image: the browser refuses to
+  // paint it in a page served from any other origin, so every photograph in
+  // the web app and in the Expo web build failed with
+  // ERR_BLOCKED_BY_RESPONSE.NotSameOrigin and no visible error. The URL is
+  // already signed and expires (§10), so the resource is not protected by
+  // being same-origin — it is protected by the signature.
+  @Header('cross-origin-resource-policy', 'cross-origin')
   async localDownload(
     @Query('key') key: string,
     @Query('expires') expires: string,

@@ -111,7 +111,11 @@ export default function NewHorseWizard() {
       return;
     }
 
-    router.replace(`/ahir/${result.data.id}`);
+    // Straight to the record, where the photo grid lives. §18.2 S10 has photos
+    // as a wizard step, but a wizard that uploads before the horse exists has
+    // nothing to attach them to — so the horse is created first and the record
+    // opens on its gallery.
+    router.replace(`/ahir/${result.data.id}?yeni=1`);
   };
 
   const back = () => (step === 1 ? router.back() : setStep(step - 1));
@@ -293,8 +297,9 @@ export default function NewHorseWizard() {
           ) : null}
 
           <Txt variant="caption" color={theme.color.textSecondary} display={false}>
-            Kaydettiğinde bu at senin ahırına eklenir. İlan vermek ayrı bir adım —
-            kayıt satış demek değil.
+            Kaydettiğinde bu at senin ahırına eklenir ve fotoğraf ekleyebileceğin
+            kayıt ekranı açılır. İlan vermek ayrı bir adım — kayıt satış demek
+            değil.
           </Txt>
         </View>
       ) : null}

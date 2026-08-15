@@ -44,6 +44,7 @@ export class GcsStorageProvider implements StorageProvider {
     return {
       uploadUrl,
       storageKey,
+      method: 'PUT',
       headers: { 'content-type': mimeType },
       expiresAt,
     };

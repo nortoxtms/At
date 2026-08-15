@@ -227,6 +227,46 @@ export class MediaService {
     return Number(rows[0]?.flagged ?? 0) > 0;
   }
 
+  /**
+   * Signed URLs for a set of media, keyed by id.
+   *
+   * §10 stores every asset behind the storage provider and hands out
+   * short-lived signed URLs; nothing in the API was returning one for a
+   * *photograph*, only for a document. The result was that `GET
+   * /horses/:id/media` answered with a list of ids and no way to fetch any of
+   * them — every client could list a horse's photos and render none.
+   *
+   * Batched because a gallery is N assets and one presign per row is N round
+   * trips to the signer on a screen that is already the slowest one.
+   */
+  async createViewUrls(
+    mediaIds: string[],
+    viewerId: string | null,
+  ): Promise<Map<string, string>> {
+    if (mediaIds.length === 0) return new Map();
+
+    // `queryAs`, not `query`. §8's `media_select` makes a horse's photograph
+    // readable by its owner, or by anyone once the horse has an active
+    // listing — and an unidentified connection is neither. Reading without the
+    // viewer's identity returned no rows for the owner's own gallery, so every
+    // photo came back with a null URL and the grid rendered empty tiles.
+    const rows = await this.db.queryAs<{ id: string; storage_key: string | null }>(
+      viewerId,
+      `SELECT id, storage_key FROM media WHERE id = ANY($1::uuid[]) AND status = 'ready'`,
+      [mediaIds],
+    );
+
+    const ttl = this.config.get('GCS_DOWNLOAD_URL_TTL_SECONDS', { infer: true }) ?? 3600;
+
+    const entries = await Promise.all(
+      rows
+        .filter((row) => row.storage_key)
+        .map(async (row) => [row.id, await this.storage.createDownloadUrl(row.storage_key!, ttl)] as const),
+    );
+
+    return new Map(entries);
+  }
+
   async createDocumentUrl(mediaId: string): Promise<string> {
     const rows = await this.db.query<{ storage_key: string | null }>(
       `SELECT storage_key FROM media WHERE id = $1 AND status = 'ready'`,

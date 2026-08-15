@@ -9,7 +9,16 @@
 export interface PresignedUpload {
   uploadUrl: string;
   storageKey: string;
-  /** Headers the client must send with the PUT, if the provider requires any. */
+  /**
+   * The verb to send the bytes with.
+   *
+   * GCS signs a PUT; the local stand-in takes a POST. Without this the client
+   * has to know which provider the API is running on, which is exactly the
+   * thing a presigned URL exists to hide — and getting it wrong is a 404 from
+   * a URL that looks correct.
+   */
+  method: 'PUT' | 'POST';
+  /** Headers the client must send with the upload, if the provider requires any. */
   headers: Record<string, string>;
   expiresAt: Date;
 }

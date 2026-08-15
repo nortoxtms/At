@@ -53,6 +53,13 @@ const envSchema = z.object({
   GCS_BUCKET: z.string().optional(),
   GCS_UPLOAD_URL_TTL_SECONDS: z.coerce.number().default(900),
   GCS_DOCUMENT_URL_TTL_SECONDS: z.coerce.number().default(300),
+  /**
+   * Photographs, unlike §10.3's documents, are shown on every browse screen —
+   * a 5-minute TTL would expire mid-scroll and leave a grid of broken images.
+   * An hour is long enough to survive a session and short enough that a leaked
+   * URL is not a permanent one.
+   */
+  GCS_DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().default(3600),
 
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

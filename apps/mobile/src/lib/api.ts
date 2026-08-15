@@ -28,6 +28,30 @@ let accessToken: string | null = null;
 let refreshToken: string | null = null;
 let onSessionLost: (() => void) | null = null;
 
+/**
+ * The boot barrier.
+ *
+ * Reading the keychain is asynchronous, and the first screen mounts and starts
+ * fetching before it finishes. Without this, a cold start on a signed-in
+ * device sends the opening requests with no `authorization` header, gets a
+ * 401, and the 401 handler — correctly, for a real expiry — *deletes the
+ * stored tokens*. The person is signed out by the act of opening the app, and
+ * nothing anywhere reports an error.
+ *
+ * So every authenticated request waits here first. It is resolved once by the
+ * session provider, whether or not a session was found; there is nothing to
+ * wait for after that.
+ */
+let releaseRestore: () => void = () => {};
+let restored = new Promise<void>((resolve) => {
+  releaseRestore = resolve;
+});
+
+/** Called by the session provider once the keychain has been read. */
+export function sessionRestored() {
+  releaseRestore();
+}
+
 export function setSession(tokens: { accessToken: string; refreshToken: string } | null) {
   accessToken = tokens?.accessToken ?? null;
   refreshToken = tokens?.refreshToken ?? null;
@@ -35,6 +59,13 @@ export function setSession(tokens: { accessToken: string; refreshToken: string }
 
 export function onSessionExpired(handler: () => void) {
   onSessionLost = handler;
+}
+
+/** Test seam: lets a signed-out flow start from a clean barrier. */
+export function resetRestoreBarrier() {
+  restored = new Promise<void>((resolve) => {
+    releaseRestore = resolve;
+  });
 }
 
 async function refresh(): Promise<boolean> {
@@ -48,10 +79,12 @@ async function refresh(): Promise<boolean> {
 
   if (!response.ok) return false;
 
-  const body = (await response.json()) as { data?: { accessToken: string; refreshToken: string } };
-  if (!body.data) return false;
+  const body = (await response.json()) as {
+    data?: { accessToken: string; refreshToken: string };
+  };
+  if (!body.data?.accessToken) return false;
 
-  setSession(body.data);
+  setSession({ accessToken: body.data.accessToken, refreshToken: body.data.refreshToken });
   return true;
 }
 
@@ -60,6 +93,9 @@ export async function api<T>(
   init: RequestInit & { auth?: boolean } = {},
 ): Promise<ApiResult<T>> {
   const { auth = true, ...options } = init;
+
+  // Never race the keychain (see `restored` above).
+  if (auth) await restored;
 
   const send = () =>
     fetch(`${API_URL}/v1${path}`, {
@@ -81,7 +117,10 @@ export async function api<T>(
       response = await send();
     }
 
-    if (response.status === 401 && auth) {
+    // Only a request that actually carried a token can prove the session is
+    // over. A 401 on a request sent without one says the app forgot to attach
+    // it, and treating that as an expiry deletes a session that was fine.
+    if (response.status === 401 && auth && accessToken) {
       onSessionLost?.();
     }
   } catch {

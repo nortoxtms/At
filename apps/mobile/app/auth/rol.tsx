@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { RoleType } from '@only-horses/shared-types';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -7,6 +8,7 @@ import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { Txt } from '@/components/Text';
 import { api } from '@/lib/api';
+import { ROLE_OPTIONS } from '@/lib/endpoints';
 import { useSession } from '@/lib/session';
 import { theme } from '@/theme/tokens';
 
@@ -20,34 +22,44 @@ import { theme } from '@/theme/tokens';
  * Nothing is gated on the answer — §3.3's permissions come from verification,
  * not from a self-declared role. This shapes what the app shows first, and it
  * is skippable for exactly that reason.
+ *
+ * The API takes one role per POST rather than a list, so this sends N requests
+ * and does not stop at the first failure: a role that collides with one the
+ * account already has must not silently discard the four after it.
  */
-const ROLES: { id: string; label: string; body: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { id: 'owner', label: 'At sahibi', body: 'Bir ya da daha fazla atım var', icon: 'ribbon-outline' },
-  { id: 'rider', label: 'Binici', body: 'Biniyorum, yarışıyorum', icon: 'walk-outline' },
-  { id: 'trainer', label: 'Eğitmen', body: 'At ve binici eğitiyorum', icon: 'school-outline' },
-  { id: 'breeder', label: 'Yetiştirici', body: 'Damızlık ve tay yetiştiriyorum', icon: 'leaf-outline' },
-  { id: 'vet', label: 'Veteriner', body: 'Sağlık hizmeti veriyorum', icon: 'medkit-outline' },
-  { id: 'farrier', label: 'Nalbant', body: 'Nal ve tırnak bakımı', icon: 'hammer-outline' },
-  { id: 'stable', label: 'İşletme', body: 'Ahır, tesis ya da kulüp', icon: 'business-outline' },
-  { id: 'buyer', label: 'Alıcı', body: 'At arıyorum', icon: 'search-outline' },
-];
+const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  horse_owner: 'ribbon-outline',
+  rider: 'walk-outline',
+  trainer: 'school-outline',
+  instructor: 'megaphone-outline',
+  breeder: 'leaf-outline',
+  veterinarian: 'medkit-outline',
+  farrier: 'hammer-outline',
+  groom: 'basket-outline',
+  transporter: 'bus-outline',
+  equine_therapist: 'fitness-outline',
+  ranch_manager: 'business-outline',
+  agent: 'briefcase-outline',
+};
 
 export default function RolePicker() {
   const router = useRouter();
   const { refreshMe } = useSession();
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<RoleType[]>([]);
   const [busy, setBusy] = useState(false);
 
-  const toggle = (id: string) =>
+  const toggle = (id: RoleType) =>
     setSelected((current) =>
       current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
     );
 
   const save = async () => {
     setBusy(true);
-    // A failure here is not worth blocking on: the roles are a hint, and the
-    // account is already created. Log the person in either way.
-    await api('/me/roles', { method: 'PUT', body: JSON.stringify({ roles: selected }) });
+
+    await Promise.all(
+      selected.map((role) => api('/me/roles', { method: 'POST', body: JSON.stringify({ role }) })),
+    );
+
     await refreshMe();
     setBusy(false);
     router.replace('/(tabs)');
@@ -64,7 +76,7 @@ export default function RolePicker() {
       </View>
 
       <View style={{ gap: theme.space.md, marginTop: theme.space.xl }}>
-        {ROLES.map((role) => {
+        {ROLE_OPTIONS.map((role) => {
           const on = selected.includes(role.id);
 
           return (
@@ -87,7 +99,7 @@ export default function RolePicker() {
               })}
             >
               <Ionicons
-                name={role.icon}
+                name={ICONS[role.id] ?? 'ellipse-outline'}
                 size={22}
                 color={on ? theme.color.goldSoft : theme.color.textSecondary}
               />

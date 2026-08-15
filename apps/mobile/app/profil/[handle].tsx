@@ -1,40 +1,46 @@
 import { Ionicons } from '@expo/vector-icons';
 import { VERIFICATION_LABEL_TR } from '@only-horses/shared-types';
-import type { ListingSearchHit } from '@only-horses/shared-types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ListingCard } from '@/components/ListingCard';
-import { Button } from '@/components/Button';
+import { Badge } from '@/components/ListingCard';
 import { Txt } from '@/components/Text';
-import { Avatar, BackButton, Card, DemoNotice, EmptyState, Loading } from '@/components/ui';
+import { Avatar, BackButton, Card, EmptyState, Loading } from '@/components/ui';
 import { api } from '@/lib/api';
-import { searchListings } from '@/lib/catalog';
+import { ROLE_OPTIONS } from '@/lib/endpoints';
 import { useAsync } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
 /**
  * S24 — someone else's profile.
  *
- * The same stat row as your own (§18.0), because a buyer comparing two sellers
- * needs the two rows to line up. Trust score gets a sentence explaining what
- * it is: a number nobody can interpret is worse than no number, since it looks
- * authoritative.
+ * §13.3's rule is the shape of this screen: never show the bare trust number.
+ * The API computes `trustChips` alongside the score for exactly that reason —
+ * short Turkish phrases naming what the score is made of — so they are what
+ * the screen leads with, and the number sits under them as a footnote.
+ *
+ * There is no seller filter on §11's search, so this does not pretend to list
+ * their horses. Showing an empty "İlanları" section on every profile would
+ * read as "this seller has nothing", which is a claim about them rather than
+ * about the API.
  */
 interface PublicProfile {
+  id: string;
   handle: string;
   displayName: string;
-  verificationLevel: string;
-  trustScore: number;
+  bio: string | null;
   city: string | null;
   region: string | null;
-  about: string | null;
-  memberSince: string | null;
+  verificationLevel: string;
+  trustScore: number;
   responseRate: number | null;
-  reviewCount: number;
-  listingCount: number;
-  horseCount: number;
+  responseTimeMins: number | null;
+  reviewCount: number | string;
+  reviewAverage: number | string | null;
+  roles: { role: string }[];
+  trustChips: string[];
+  createdAt: string;
 }
 
 export default function PublicProfileScreen() {
@@ -43,35 +49,13 @@ export default function PublicProfileScreen() {
   const { handle } = useLocalSearchParams<{ handle: string }>();
 
   const { data, loading } = useAsync(async () => {
-    const [profile, listings] = await Promise.all([
-      api<PublicProfile>(`/users/${handle}`, { auth: false }),
-      api<ListingSearchHit[]>(`/listings/search?seller=${encodeURIComponent(String(handle))}`, {
-        auth: false,
-      }),
-    ]);
-
-    if (profile.ok && profile.data) {
-      return {
-        profile: profile.data,
-        listings: listings.ok && Array.isArray(listings.data) ? listings.data : [],
-        source: 'live' as const,
-      };
-    }
-
-    // Without the API there is no such person; the demo dataset has listings
-    // but no seller records behind them, and inventing one would put a
-    // fabricated trust score on screen.
-    const fallback = await searchListings();
-    return {
-      profile: null,
-      listings: fallback.data.slice(0, 3),
-      source: 'demo' as const,
-    };
+    const result = await api<PublicProfile>(`/profiles/${encodeURIComponent(String(handle))}`, {
+      auth: false,
+    });
+    return result.ok ? result.data : null;
   }, [handle]);
 
   if (loading) return <Loading />;
-
-  const profile = data?.profile ?? null;
 
   return (
     <ScrollView
@@ -91,78 +75,101 @@ export default function PublicProfileScreen() {
         <View style={{ width: theme.metric.minTouchTarget }} />
       </View>
 
-      {data?.source === 'demo' ? <DemoNotice style={{ marginTop: theme.space.lg }} /> : null}
-
-      {profile ? (
+      {!data ? (
+        <EmptyState
+          icon="person-outline"
+          title="Profil bulunamadı"
+          body="Bu hesap kaldırılmış ya da askıya alınmış olabilir."
+        />
+      ) : (
         <>
           <View style={{ alignItems: 'center', gap: theme.space.md, paddingVertical: theme.space.xl }}>
-            <Avatar name={profile.displayName} size={theme.metric.avatarProfile} />
-            <Txt variant="h1">{profile.displayName}</Txt>
+            <Avatar name={data.displayName} size={theme.metric.avatarProfile} />
+            <Txt variant="h1">{data.displayName}</Txt>
             <Txt variant="small" color={theme.color.textSecondary} display={false}>
-              @{profile.handle}
-              {profile.city ? ` · ${profile.city}` : ''}
+              @{data.handle}
+              {data.city ? ` · ${data.city}` : ''}
             </Txt>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
               <Ionicons name="shield-checkmark" size={13} color={theme.color.goldSoft} />
               <Txt variant="caption" color={theme.color.textSecondary} display={false}>
-                {VERIFICATION_LABEL_TR[profile.verificationLevel] ?? profile.verificationLevel}
+                {VERIFICATION_LABEL_TR[data.verificationLevel] ?? data.verificationLevel}
               </Txt>
             </View>
           </View>
 
-          <Card style={{ flexDirection: 'row', paddingVertical: theme.space.lg }}>
-            <Stat label="İlan" value={String(profile.listingCount)} />
-            <Stat label="At" value={String(profile.horseCount)} />
-            <Stat label="Değerlendirme" value={String(profile.reviewCount)} />
+          {(data.roles ?? []).length > 0 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.sm, justifyContent: 'center' }}>
+              {data.roles.map((entry) => (
+                <Badge
+                  key={entry.role}
+                  label={ROLE_OPTIONS.find((role) => role.id === entry.role)?.label ?? entry.role}
+                />
+              ))}
+            </View>
+          ) : null}
+
+          {/* §18.0's stat row, with the two numbers the API actually knows. */}
+          <Card style={{ flexDirection: 'row', paddingVertical: theme.space.lg, marginTop: theme.space.xl }}>
+            <Stat label="Değerlendirme" value={String(Number(data.reviewCount ?? 0))} />
+            <Stat
+              label="Puan"
+              value={
+                data.reviewAverage === null || data.reviewAverage === undefined
+                  ? '—'
+                  : Number(data.reviewAverage).toFixed(1)
+              }
+            />
             <Stat
               label="Yanıt"
-              value={profile.responseRate === null ? '—' : `%${Math.round(profile.responseRate)}`}
+              value={data.responseRate === null ? '—' : `%${Math.round(Number(data.responseRate))}`}
+            />
+            <Stat
+              label="Yanıt süresi"
+              value={data.responseTimeMins === null ? '—' : formatMinutes(Number(data.responseTimeMins))}
               last
             />
           </Card>
 
-          <Card style={{ marginTop: theme.space.md, gap: theme.space.sm }}>
-            <Txt variant="h3">Güven puanı {profile.trustScore}</Txt>
-            <Txt variant="small" color={theme.color.textSecondary} display={false}>
-              §18.4 — doğrulama seviyesi, tamamlanan işlemler, yanıt hızı ve
-              değerlendirmelerden hesaplanır. Satın alınamaz, hediye edilemez.
-            </Txt>
-          </Card>
-
-          {profile.about ? (
-            <View style={{ marginTop: theme.space.lg, gap: theme.space.sm }}>
-              <Txt variant="h3">Hakkında</Txt>
-              <Txt variant="body" color={theme.color.textSecondary} display={false}>
-                {profile.about}
+          {/* §13.3 / P4: the chips are the score. */}
+          {(data.trustChips ?? []).length > 0 ? (
+            <View style={{ marginTop: theme.space.lg, gap: theme.space.md }}>
+              <Txt variant="h3">Neden güvenilir</Txt>
+              <View style={{ gap: theme.space.sm }}>
+                {data.trustChips.map((chip) => (
+                  <View key={chip} style={{ flexDirection: 'row', alignItems: 'center', gap: theme.space.sm }}>
+                    <Ionicons name="checkmark-circle-outline" size={15} color={theme.color.goldSoft} />
+                    <Txt variant="small" display={false} style={{ flex: 1 }}>
+                      {chip}
+                    </Txt>
+                  </View>
+                ))}
+              </View>
+              <Txt variant="caption" color={theme.color.textSecondary} display={false}>
+                Güven puanı {data.trustScore}. Satın alınamaz, hediye edilemez.
               </Txt>
             </View>
           ) : null}
 
-          <Button
-            label="Mesaj gönder"
-            style={{ marginTop: theme.space.xl }}
-            onPress={() => router.push('/mesajlar/yeni')}
-          />
+          {data.bio ? (
+            <View style={{ marginTop: theme.space.xl, gap: theme.space.sm }}>
+              <Txt variant="h3">Hakkında</Txt>
+              <Txt variant="body" color={theme.color.textSecondary} display={false}>
+                {data.bio}
+              </Txt>
+            </View>
+          ) : null}
         </>
-      ) : (
-        <EmptyState
-          icon="person-outline"
-          title="Profil yüklenemedi"
-          body="Bu profil sunucudan geliyor; şu anda ulaşılamıyor. Aşağıda örnek ilanlar var."
-        />
       )}
-
-      <View style={{ marginTop: theme.space.xxl, gap: theme.space.lg }}>
-        <Txt variant="h2">İlanları</Txt>
-        {(data?.listings ?? []).length === 0 ? (
-          <EmptyState icon="list-outline" title="Yayında ilan yok" />
-        ) : (
-          (data?.listings ?? []).map((hit) => <ListingCard key={hit.id} hit={hit} />)
-        )}
-      </View>
     </ScrollView>
   );
+}
+
+function formatMinutes(minutes: number): string {
+  if (minutes < 60) return `${Math.round(minutes)} dk`;
+  if (minutes < 1440) return `${Math.round(minutes / 60)} sa`;
+  return `${Math.round(minutes / 1440)} gün`;
 }
 
 function Stat({ label, value, last }: { label: string; value: string; last?: boolean }) {

@@ -8,59 +8,66 @@ import { Txt } from '@/components/Text';
 import { Avatar, BackButton, DemoNotice, EmptyState, Loading } from '@/components/ui';
 import { SAMPLE_THREADS, type SampleMessage } from '@/content/sample';
 import { api } from '@/lib/api';
+import type { ConversationMessage, ConversationSummary } from '@/lib/endpoints';
 import { relativeTime } from '@/lib/format';
+import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
 /**
  * S22 — a conversation.
  *
- * Two decisions worth naming. The subject sits in a bar under the header, not
- * as the first bubble: it is context for every message, and a first bubble
- * scrolls away.
+ * Three decisions worth naming.
  *
- * And an outgoing message appears immediately, marked as sending. §16 puts
+ * The subject sits in a bar under the header, not as the first bubble: it is
+ * context for every message, and a first bubble scrolls away.
+ *
+ * An outgoing message appears immediately, marked as sending. §16 puts
  * messages through moderation, so the round trip is not instant; a chat that
  * waits for the server before showing what you typed feels broken on a mobile
- * connection. If the send fails the bubble says so and offers a retry rather
- * than vanishing.
+ * connection. If the send fails the bubble says so rather than vanishing, and
+ * the text stays in the composer so nothing is lost.
+ *
+ * And §16's payment warning is rendered where the message is, not as a banner
+ * on the screen. A warning about *this* message that floats at the top is a
+ * warning about nothing in particular by the third message.
  */
-interface ApiMessage {
-  id: string;
-  body: string;
-  senderId: string;
-  sentAt: string;
-}
-
-type Pending = SampleMessage & { state?: 'sending' | 'failed' };
+type Pending = SampleMessage & { state?: 'sending' | 'failed'; warning?: boolean; system?: boolean };
 
 export default function ThreadScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { me } = useSession();
   const list = useRef<FlatList<Pending>>(null);
 
   const [draft, setDraft] = useState('');
   const [outgoing, setOutgoing] = useState<Pending[]>([]);
+  const [sending, setSending] = useState(false);
 
   const { data, loading } = useAsync(async () => {
-    const [thread, messages] = await Promise.all([
-      api<{ counterpartyName: string; subjectTitle: string | null; subjectSlug: string | null }>(
-        `/messages/threads/${id}`,
-      ),
-      api<ApiMessage[]>(`/messages/threads/${id}/messages`),
+    const [messages, summaries] = await Promise.all([
+      api<ConversationMessage[]>(`/conversations/${id}`),
+      api<ConversationSummary[]>('/conversations'),
     ]);
 
-    if (thread.ok && messages.ok && Array.isArray(messages.data)) {
+    if (messages.ok && Array.isArray(messages.data)) {
+      const summary = summaries.ok
+        ? (summaries.data ?? []).find((entry) => entry.id === id)
+        : undefined;
+
       return {
-        counterparty: thread.data.counterpartyName,
-        subject: thread.data.subjectTitle,
-        subjectSlug: thread.data.subjectSlug,
+        counterparty: summary?.counterpartName ?? 'Konuşma',
+        subject: summary?.contextTitle ?? null,
+        subjectType: summary?.contextType ?? null,
+        subjectId: summary?.contextId ?? null,
         messages: messages.data.map<Pending>((message) => ({
           id: message.id,
-          fromMe: false,
+          fromMe: !!me && message.sender_id === me.id,
           body: message.body,
-          sentAt: message.sentAt,
+          sentAt: message.created_at,
+          warning: message.payment_warning,
+          system: message.is_system,
         })),
         source: 'live' as const,
       };
@@ -72,11 +79,12 @@ export default function ThreadScreen() {
     return {
       counterparty: sample.counterparty,
       subject: sample.listingTitle,
-      subjectSlug: sample.listingSlug,
+      subjectType: 'listing' as string | null,
+      subjectId: null as string | null,
       messages: sample.messages as Pending[],
       source: 'demo' as const,
     };
-  }, [id]);
+  }, [id, me?.id]);
 
   const messages = [...(data?.messages ?? []), ...outgoing];
 
@@ -89,7 +97,7 @@ export default function ThreadScreen() {
 
   const send = async () => {
     const body = draft.trim();
-    if (!body) return;
+    if (!body || sending) return;
 
     const local: Pending = {
       id: `local-${messages.length}-${body.length}`,
@@ -99,19 +107,26 @@ export default function ThreadScreen() {
       state: 'sending',
     };
 
+    setSending(true);
     setOutgoing((current) => [...current, local]);
     setDraft('');
 
-    const result = await api(`/messages/threads/${id}/messages`, {
+    const result = await api(`/conversations/${id}/messages`, {
       method: 'POST',
       body: JSON.stringify({ body }),
     });
 
+    setSending(false);
+
+    if (!result.ok) {
+      // Put the text back. A failed send that also eats the message is the
+      // one failure mode people never forgive.
+      setDraft(body);
+    }
+
     setOutgoing((current) =>
       current.map((message) =>
-        message.id === local.id
-          ? { ...message, state: result.ok ? undefined : 'failed' }
-          : message,
+        message.id === local.id ? { ...message, state: result.ok ? undefined : 'failed' } : message,
       ),
     );
   };
@@ -147,10 +162,7 @@ export default function ThreadScreen() {
       </View>
 
       {data.subject ? (
-        <Pressable
-          accessibilityRole="link"
-          accessibilityLabel={`İlana git: ${data.subject}`}
-          onPress={() => data.subjectSlug && router.push(`/ilan/${data.subjectSlug}`)}
+        <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -168,55 +180,89 @@ export default function ThreadScreen() {
           <Txt variant="caption" display={false} style={{ flex: 1 }} numberOfLines={1}>
             {data.subject}
           </Txt>
-          <Ionicons name="chevron-forward" size={14} color={theme.color.textSecondary} />
-        </Pressable>
+        </View>
       ) : null}
 
       <FlatList
         ref={list}
         data={messages}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{
-          padding: theme.screenPadding,
-          gap: theme.space.md,
-        }}
+        contentContainerStyle={{ padding: theme.screenPadding, gap: theme.space.md }}
         ListHeaderComponent={
           data.source === 'demo' ? <DemoNotice style={{ marginBottom: theme.space.md }} /> : null
         }
-        renderItem={({ item }) => (
-          <View
-            style={{
-              alignSelf: item.fromMe ? 'flex-end' : 'flex-start',
-              maxWidth: '82%',
-              padding: theme.space.md,
-              borderRadius: theme.radius.md,
-              backgroundColor: item.fromMe ? theme.color.goldSoft : theme.color.surfaceRaised,
-              borderWidth: item.fromMe ? 0 : 1,
-              borderColor: theme.color.border,
-              gap: 4,
-            }}
-          >
+        ListEmptyComponent={
+          <EmptyState icon="chatbubble-outline" title="Henüz mesaj yok" />
+        }
+        renderItem={({ item }) =>
+          item.system ? (
             <Txt
-              variant="body"
+              variant="caption"
+              align="center"
+              color={theme.color.textSecondary}
               display={false}
-              color={item.fromMe ? theme.color.textOnGold : theme.color.textPrimary}
+              style={{ paddingVertical: theme.space.sm }}
             >
               {item.body}
             </Txt>
-            <Txt
-              variant="caption"
-              display={false}
-              color={item.fromMe ? theme.color.textOnGold : theme.color.textSecondary}
-              style={{ opacity: 0.75, alignSelf: 'flex-end' }}
-            >
-              {item.state === 'sending'
-                ? 'gönderiliyor…'
-                : item.state === 'failed'
-                  ? 'gönderilemedi'
-                  : relativeTime(item.sentAt)}
-            </Txt>
-          </View>
-        )}
+          ) : (
+            <View style={{ alignSelf: item.fromMe ? 'flex-end' : 'flex-start', maxWidth: '82%', gap: 4 }}>
+              <View
+                style={{
+                  padding: theme.space.md,
+                  borderRadius: theme.radius.md,
+                  backgroundColor: item.fromMe ? theme.color.goldSoft : theme.color.surfaceRaised,
+                  borderWidth: item.fromMe ? 0 : 1,
+                  borderColor: theme.color.border,
+                  gap: 4,
+                }}
+              >
+                <Txt
+                  variant="body"
+                  display={false}
+                  color={item.fromMe ? theme.color.textOnGold : theme.color.textPrimary}
+                >
+                  {item.body}
+                </Txt>
+                <Txt
+                  variant="caption"
+                  display={false}
+                  color={item.fromMe ? theme.color.textOnGold : theme.color.textSecondary}
+                  style={{ opacity: 0.75, alignSelf: 'flex-end' }}
+                >
+                  {item.state === 'sending'
+                    ? 'gönderiliyor…'
+                    : item.state === 'failed'
+                      ? 'gönderilemedi'
+                      : relativeTime(item.sentAt)}
+                </Txt>
+              </View>
+
+              {/* §16: money moving off-platform is the scam, so the warning
+                  sits on the message that mentioned it. */}
+              {item.warning ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingHorizontal: theme.space.md,
+                    paddingVertical: 6,
+                    borderRadius: theme.radius.sm,
+                    backgroundColor: theme.color.surface,
+                    borderWidth: 1,
+                    borderColor: theme.color.warning,
+                  }}
+                >
+                  <Ionicons name="warning-outline" size={13} color={theme.color.warning} />
+                  <Txt variant="caption" color={theme.color.textSecondary} display={false} style={{ flex: 1 }}>
+                    Kapora ya da havale isteyen mesajlara dikkat et. Atı görmeden ödeme yapma.
+                  </Txt>
+                </View>
+              ) : null}
+            </View>
+          )
+        }
       />
 
       <View
@@ -259,8 +305,8 @@ export default function ThreadScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Gönder"
-          accessibilityState={{ disabled: !draft.trim() }}
-          disabled={!draft.trim()}
+          accessibilityState={{ disabled: !draft.trim() || sending }}
+          disabled={!draft.trim() || sending}
           onPress={() => void send()}
           style={{
             width: theme.metric.minTouchTarget,

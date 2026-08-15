@@ -1,8 +1,4 @@
-import {
-  DISCIPLINE_LABEL_TR,
-  LISTING_TYPE_LABEL_TR,
-  SEX_LABEL_TR,
-} from '@only-horses/shared-types';
+import { LISTING_TYPE_LABEL_TR, SEX_LABEL_TR } from '@only-horses/shared-types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -11,7 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Txt } from '@/components/Text';
 import { Chip, Field } from '@/components/ui';
-import { DISCIPLINES, LISTING_TYPES, REGIONS } from '@/lib/catalog';
+import { LISTING_TYPES, REGIONS } from '@/lib/catalog';
+import { loadDisciplines } from '@/lib/reference';
+import { useAsync } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
 /**
@@ -45,6 +43,8 @@ export default function FiltersSheet() {
   const [sex, setSex] = useState(params.sex ?? '');
   const [discipline, setDiscipline] = useState(params.discipline ?? '');
   const [maxPrice, setMaxPrice] = useState(params.maxPriceEur ?? '');
+
+  const { data: disciplineTable } = useAsync(() => loadDisciplines(), []);
 
   const apply = () => {
     router.dismissTo({
@@ -120,12 +120,12 @@ export default function FiltersSheet() {
         </Group>
 
         <Group title="Disiplin">
-          {DISCIPLINES.map((value) => (
+          {(disciplineTable ?? []).map((entry) => (
             <Chip
-              key={value}
-              label={DISCIPLINE_LABEL_TR[value] ?? value}
-              selected={discipline === value}
-              onPress={() => toggle(discipline, value, setDiscipline)}
+              key={entry.code}
+              label={entry.name}
+              selected={discipline === entry.code}
+              onPress={() => toggle(discipline, entry.code, setDiscipline)}
             />
           ))}
         </Group>

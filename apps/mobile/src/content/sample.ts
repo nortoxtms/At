@@ -1,4 +1,5 @@
 import { DEMO_LISTINGS } from '@only-horses/demo-content';
+import type { HealthRecordType } from '@only-horses/shared-types';
 
 /**
  * Sample threads, stable and health records for the signed-out preview.
@@ -114,7 +115,8 @@ export const SAMPLE_STABLE: SampleHorse[] = DEMO_LISTINGS.slice(0, 3).map((hit, 
 
 export interface SampleHealthRecord {
   id: string;
-  kind: 'vaccination' | 'farrier' | 'dental' | 'vet_visit' | 'deworming';
+  /** §7's `healthRecordType`, not a hand-written subset of it. */
+  kind: HealthRecordType;
   date: string;
   title: string;
   detail: string;
@@ -156,10 +158,3 @@ export const SAMPLE_HEALTH: SampleHealthRecord[] = [
   },
 ];
 
-export const HEALTH_KIND_LABEL_TR: Record<SampleHealthRecord['kind'], string> = {
-  vaccination: 'Aşı',
-  farrier: 'Nalbant',
-  dental: 'Diş',
-  vet_visit: 'Veteriner',
-  deworming: 'Parazit',
-};

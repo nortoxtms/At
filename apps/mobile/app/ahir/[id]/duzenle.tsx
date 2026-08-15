@@ -1,4 +1,4 @@
-import { DISCIPLINE_LABEL_TR, SEX_LABEL_TR } from '@only-horses/shared-types';
+import { SEX_LABEL_TR } from '@only-horses/shared-types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -9,7 +9,7 @@ import { Txt } from '@/components/Text';
 import { Choice } from '@/components/Wizard';
 import { BackButton, Card, Chip, Field, Loading } from '@/components/ui';
 import { api } from '@/lib/api';
-import { DISCIPLINES } from '@/lib/catalog';
+import { loadDisciplines, type ReferenceItem } from '@/lib/reference';
 import { theme } from '@/theme/tokens';
 
 /**
@@ -39,9 +39,14 @@ export default function EditHorseScreen() {
   const [color, setColor] = useState('');
   const [about, setAbout] = useState('');
   const [disciplines, setDisciplines] = useState<string[]>([]);
+  const [disciplineTable, setDisciplineTable] = useState<ReferenceItem[]>([]);
 
   useEffect(() => {
     let cancelled = false;
+
+    void loadDisciplines().then((table) => {
+      if (!cancelled) setDisciplineTable(table);
+    });
 
     void (async () => {
       const result = await api<Record<string, unknown>>(`/horses/${id}`);
@@ -136,16 +141,16 @@ export default function EditHorseScreen() {
           Disiplinler
         </Txt>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.sm }}>
-          {DISCIPLINES.map((value) => (
+          {disciplineTable.map((entry) => (
             <Chip
-              key={value}
-              label={DISCIPLINE_LABEL_TR[value] ?? value}
-              selected={disciplines.includes(value)}
+              key={entry.code}
+              label={entry.name}
+              selected={disciplines.includes(entry.code)}
               onPress={() =>
                 setDisciplines((current) =>
-                  current.includes(value)
-                    ? current.filter((entry) => entry !== value)
-                    : [...current, value],
+                  current.includes(entry.code)
+                    ? current.filter((value) => value !== entry.code)
+                    : [...current, entry.code],
                 )
               }
             />

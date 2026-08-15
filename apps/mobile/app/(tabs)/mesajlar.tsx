@@ -7,6 +7,7 @@ import { Txt } from '@/components/Text';
 import { Avatar, DemoNotice, EmptyState, Loading } from '@/components/ui';
 import { SAMPLE_THREADS, type SampleThread } from '@/content/sample';
 import { api } from '@/lib/api';
+import type { ConversationSummary } from '@/lib/endpoints';
 import { relativeTime } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
@@ -20,29 +21,28 @@ import { theme } from '@/theme/tokens';
  * — with three enquiries about three horses from the same yard, the preview is
  * the only thing that tells them apart, and it is the wrong thing.
  */
-interface ApiThread {
-  id: string;
-  counterpartyName: string;
-  counterpartyHandle: string;
-  subjectTitle: string | null;
-  subjectSlug: string | null;
-  unreadCount: number;
-  lastMessageAt: string | null;
-  lastMessageBody: string | null;
-}
-
-function normalise(thread: ApiThread): SampleThread {
+function normalise(thread: ConversationSummary): SampleThread {
   return {
     id: thread.id,
-    counterparty: thread.counterpartyName,
-    counterpartyHandle: thread.counterpartyHandle,
-    listingSlug: thread.subjectSlug ?? '',
-    listingTitle: thread.subjectTitle ?? '',
-    horseName: thread.subjectTitle ?? '',
-    unread: thread.unreadCount,
+    counterparty: thread.counterpartName ?? 'Silinmiş hesap',
+    counterpartyHandle: thread.counterpartId ?? '',
+    // §12's summary carries the context's title, not its slug — opening the
+    // listing needs a second read, so the row links to the conversation and
+    // the conversation links to the listing.
+    listingSlug: '',
+    listingTitle: thread.contextTitle ?? '',
+    horseName: thread.contextTitle ?? '',
+    unread: thread.unread ? 1 : 0,
     lastAt: thread.lastMessageAt ?? '',
     messages: thread.lastMessageBody
-      ? [{ id: 'last', fromMe: false, body: thread.lastMessageBody, sentAt: thread.lastMessageAt ?? '' }]
+      ? [
+          {
+            id: 'last',
+            fromMe: false,
+            body: thread.lastMessageBody,
+            sentAt: thread.lastMessageAt ?? '',
+          },
+        ]
       : [],
   };
 }
@@ -53,7 +53,7 @@ export default function MessagesScreen() {
   const { me, ready } = useSession();
 
   const { data, loading } = useAsync(async () => {
-    const result = await api<ApiThread[]>('/messages/threads');
+    const result = await api<ConversationSummary[]>('/conversations');
     if (result.ok && Array.isArray(result.data)) {
       return { data: result.data.map(normalise), source: 'live' as const };
     }

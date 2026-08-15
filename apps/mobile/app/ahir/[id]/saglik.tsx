@@ -6,8 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Txt } from '@/components/Text';
 import { BackButton, Card, DemoNotice, EmptyState, Loading } from '@/components/ui';
-import { HEALTH_KIND_LABEL_TR, SAMPLE_HEALTH, type SampleHealthRecord } from '@/content/sample';
+import { SAMPLE_HEALTH, type SampleHealthRecord } from '@/content/sample';
 import { api } from '@/lib/api';
+import { HEALTH_TYPES, type HealthRecord } from '@/lib/endpoints';
 import { theme } from '@/theme/tokens';
 import { useAsync } from '@/lib/useAsync';
 
@@ -22,19 +23,16 @@ import { useAsync } from '@/lib/useAsync';
  * record they entered is private and are wrong, or assume it is shown to
  * buyers and are also wrong. The default is private.
  */
-interface ApiHealthRecord {
-  id: string;
-  kind: string;
-  performed_on: string;
-  title: string;
-  notes: string | null;
-  next_due_on: string | null;
-}
-
-function normalise(record: ApiHealthRecord): SampleHealthRecord {
+/**
+ * §12 calls the column `type`, not `kind`, and §7's enum has `vet_exam` where
+ * an English reading expects `vet_visit`. Both were wrong here and both fail
+ * quietly: a mismatched key reads as undefined and every record renders under
+ * the fallback label.
+ */
+function normalise(record: HealthRecord): SampleHealthRecord {
   return {
     id: record.id,
-    kind: (record.kind as SampleHealthRecord['kind']) ?? 'vet_visit',
+    kind: record.type,
     date: record.performed_on,
     title: record.title,
     detail: record.notes ?? '',
@@ -42,12 +40,24 @@ function normalise(record: ApiHealthRecord): SampleHealthRecord {
   };
 }
 
+const LABEL: Record<string, string> = Object.fromEntries(
+  HEALTH_TYPES.map((entry) => [entry.id, entry.label]),
+);
+
 const KIND_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   vaccination: 'medkit-outline',
+  deworming: 'bug-outline',
   farrier: 'hammer-outline',
   dental: 'happy-outline',
-  vet_visit: 'pulse-outline',
-  deworming: 'bug-outline',
+  vet_exam: 'pulse-outline',
+  ppe: 'clipboard-outline',
+  surgery: 'cut-outline',
+  injury: 'bandage-outline',
+  lameness: 'walk-outline',
+  xray: 'scan-outline',
+  lab_result: 'flask-outline',
+  medication: 'eyedrop-outline',
+  other: 'ellipse-outline',
 };
 
 export default function HealthScreen() {
@@ -56,7 +66,7 @@ export default function HealthScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const { data, loading } = useAsync(async () => {
-    const result = await api<ApiHealthRecord[]>(`/horses/${id}/health-records`);
+    const result = await api<HealthRecord[]>(`/horses/${id}/health`);
     if (result.ok && Array.isArray(result.data)) {
       return { data: result.data.map(normalise), source: 'live' as const };
     }
@@ -143,7 +153,7 @@ export default function HealthScreen() {
                     {item.title}
                   </Txt>
                   <Txt variant="caption" color={theme.color.textSecondary} display={false}>
-                    {HEALTH_KIND_LABEL_TR[item.kind] ?? item.kind}
+                    {LABEL[item.kind] ?? item.kind}
                   </Txt>
                 </View>
 

@@ -9,6 +9,7 @@ import { Txt } from '@/components/Text';
 import { Wordmark } from '@/components/Wordmark';
 import { BackButton, Field } from '@/components/ui';
 import { api } from '@/lib/api';
+import type { AuthResponse } from '@/lib/endpoints';
 import { useSession } from '@/lib/session';
 import { theme } from '@/theme/tokens';
 
@@ -45,7 +46,10 @@ export default function AuthScreen() {
     const body =
       mode === 'signIn' ? { email, password } : { email, password, displayName };
 
-    const result = await api<{ accessToken: string; refreshToken: string }>(path, {
+    // §12 answers with `{ profile, tokens }`. Reading the tokens off the top
+    // level yields undefined, which stores an empty session and then signs the
+    // person straight back out on the next screen.
+    const result = await api<AuthResponse>(path, {
       method: 'POST',
       body: JSON.stringify(body),
       auth: false,
@@ -58,7 +62,7 @@ export default function AuthScreen() {
       return;
     }
 
-    await signIn(result.data);
+    await signIn(result.data.tokens);
     // A new account has no role yet, and §3.1's permissions hang off it.
     router.replace(mode === 'signUp' ? '/auth/rol' : '/(tabs)');
   };

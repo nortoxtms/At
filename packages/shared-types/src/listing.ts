@@ -232,6 +232,7 @@ export interface ListingDetail {
   visibility_health: string;
   visibility_pedigree: string;
 
+  seller_profile_id: string;
   seller_handle: string;
   seller_name: string;
   seller_trust_score: number;

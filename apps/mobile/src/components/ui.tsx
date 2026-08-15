@@ -86,7 +86,16 @@ export function Chip({
   );
 }
 
-/** A labelled text input on `--surface-input`. */
+/**
+ * A labelled text input on `--surface-input`.
+ *
+ * The label is passed to the control as well as drawn above it. React Native
+ * has no `<label for>`, so a visual label is invisible to assistive tech —
+ * every field in the app announced only its placeholder, which §18.3 does not
+ * allow and which is also why an automated walk of the forms could not find
+ * them by name. The error, when there is one, is announced with the field
+ * rather than after it.
+ */
 export function Field({
   label,
   hint,
@@ -100,6 +109,10 @@ export function Field({
         {label}
       </Txt>
       <TextInput
+        accessibilityLabel={label}
+        accessibilityHint={error ?? hint}
+        aria-label={label}
+        aria-invalid={!!error}
         placeholderTextColor={theme.color.textMuted}
         {...rest}
         style={{

@@ -1,24 +1,49 @@
 import { useRouter } from 'expo-router';
-import { FlatList, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ListingCard } from '@/components/ListingCard';
 import { Button } from '@/components/Button';
 import { Txt } from '@/components/Text';
-import { BackButton, EmptyState, Loading } from '@/components/ui';
-import type { ListingSearchHit } from '@only-horses/shared-types';
+import { BackButton, Card, EmptyState, Loading } from '@/components/ui';
 import { api } from '@/lib/api';
+import { relativeTime } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
 /**
- * S19 — saved listings.
+ * S19 — saved items.
  *
  * Signed out, this is empty and says why. §10's saved items are per account,
  * not per device: a local list would be lost on reinstall and would silently
  * disagree with the same list on the web.
+ *
+ * `resolve_saved_items` returns listings, services and jobs in one flat set
+ * with a `item_type` discriminator, so this renders a generic row rather than
+ * a listing card. Filtering it down to listings would hide the saved farrier
+ * without ever saying so.
  */
+interface SavedRow {
+  item_type: string;
+  item_id: string;
+  note: string | null;
+  created_at: string | null;
+  title: string | null;
+  slug: string | null;
+  subtitle: string | null;
+  /** §10: a listing that closed stays on the list, marked, rather than vanishing. */
+  is_available: boolean;
+}
+
+const TYPE_LABEL: Record<string, string> = {
+  listing: 'İlan',
+  service: 'Hizmet',
+  job: 'İş',
+  horse: 'At',
+  profile: 'Profil',
+  organization: 'İşletme',
+};
+
 export default function SavedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -26,7 +51,7 @@ export default function SavedScreen() {
 
   const { data, loading } = useAsync(async () => {
     if (!me) return [];
-    const result = await api<ListingSearchHit[]>('/me/saved');
+    const result = await api<SavedRow[]>('/saved');
     return result.ok && Array.isArray(result.data) ? result.data : [];
   }, [me?.id]);
 
@@ -54,7 +79,7 @@ export default function SavedScreen() {
       ) : (
         <FlatList
           data={saved}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => `${item.item_type}:${item.item_id}`}
           contentContainerStyle={{
             paddingHorizontal: theme.screenPadding,
             paddingVertical: theme.space.lg,
@@ -77,7 +102,48 @@ export default function SavedScreen() {
               />
             )
           }
-          renderItem={({ item }) => <ListingCard hit={item} />}
+          renderItem={({ item }) => (
+            <Pressable
+              accessibilityRole={item.slug && item.item_type === 'listing' ? 'link' : 'text'}
+              disabled={!item.slug || item.item_type !== 'listing'}
+              onPress={() => router.push(`/ilan/${item.slug}`)}
+            >
+            <Card style={{ gap: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.space.sm }}>
+                <Txt variant="h3" style={{ flex: 1 }} numberOfLines={2}>
+                  {item.title ?? 'Kaldırılmış kayıt'}
+                </Txt>
+                <Txt variant="caption" color={theme.color.textSecondary} display={false}>
+                  {TYPE_LABEL[item.item_type] ?? item.item_type}
+                </Txt>
+              </View>
+
+              {item.subtitle ? (
+                <Txt variant="small" color={theme.color.textSecondary} display={false} numberOfLines={1}>
+                  {item.subtitle}
+                </Txt>
+              ) : null}
+
+              {item.is_available ? null : (
+                <Txt variant="caption" color={theme.color.warning} display={false}>
+                  Artık yayında değil
+                </Txt>
+              )}
+
+              {item.note ? (
+                <Txt variant="caption" color={theme.color.textSecondary} display={false}>
+                  Notun: {item.note}
+                </Txt>
+              ) : null}
+
+              {item.created_at ? (
+                <Txt variant="caption" color={theme.color.textSecondary} display={false}>
+                  {relativeTime(item.created_at)} kaydedildi
+                </Txt>
+              ) : null}
+            </Card>
+            </Pressable>
+          )}
         />
       )}
     </View>

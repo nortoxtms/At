@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -8,6 +8,8 @@ import { Txt } from '@/components/Text';
 import { BackButton, Card, Field } from '@/components/ui';
 import { Choice } from '@/components/Wizard';
 import { api } from '@/lib/api';
+import { REPORT_REASONS } from '@/lib/endpoints';
+import { useSession } from '@/lib/session';
 import { theme } from '@/theme/tokens';
 
 /**
@@ -21,31 +23,47 @@ import { theme } from '@/theme/tokens';
  * kaldırılacak" and then does not is worse than one that says what actually
  * happens next.
  */
-const REASONS = ['welfare', 'scam', 'misleading', 'duplicate', 'offensive', 'other'] as const;
-
-const REASON_LABEL: Record<string, string> = {
-  welfare: 'At refahı',
-  scam: 'Dolandırıcılık',
-  misleading: 'Yanıltıcı bilgi',
-  duplicate: 'Mükerrer ilan',
-  offensive: 'Uygunsuz içerik',
-  other: 'Diğer',
-};
+const REASON_IDS = REPORT_REASONS.map((entry) => entry.id);
+const REASON_LABEL: Record<string, string> = Object.fromEntries(
+  REPORT_REASONS.map((entry) => [entry.id, entry.label]),
+);
 
 export default function ReportScreen() {
   const router = useRouter();
-  const [reason, setReason] = useState<(typeof REASONS)[number] | null>(null);
+  const { me } = useSession();
+
+  // What is being reported arrives as params. §18.5's report is always about
+  // a specific thing — a screen that lets someone report "in general" produces
+  // a queue entry a moderator cannot act on.
+  const { type, id } = useLocalSearchParams<{ type?: string; id?: string }>();
+
+  const [reason, setReason] = useState<string | null>(null);
   const [detail, setDetail] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
     setBusy(true);
-    await api('/reports', {
+    setError(null);
+
+    const result = await api('/reports', {
       method: 'POST',
-      body: JSON.stringify({ reason, detail: detail.trim() || null }),
+      body: JSON.stringify({
+        targetType: type ?? 'listing',
+        targetId: id,
+        reason,
+        ...(detail.trim() ? { details: detail.trim() } : {}),
+      }),
     });
+
     setBusy(false);
+
+    if (!result.ok) {
+      setError(result.error.message);
+      return;
+    }
+
     setSent(true);
   };
 
@@ -77,7 +95,7 @@ export default function ReportScreen() {
 
           <Choice
             label="Sebep"
-            options={REASONS}
+            options={REASON_IDS}
             value={reason}
             onChange={setReason}
             render={(option) => REASON_LABEL[option] ?? option}
@@ -93,10 +111,22 @@ export default function ReportScreen() {
             style={{ minHeight: 160 }}
           />
 
+          {error ? (
+            <Txt variant="small" color={theme.color.danger} display={false}>
+              {error}
+            </Txt>
+          ) : null}
+
+          {me ? null : (
+            <Txt variant="small" color={theme.color.textSecondary} display={false}>
+              Bildirim göndermek için giriş yapman gerekiyor.
+            </Txt>
+          )}
+
           <Button
             label="Gönder"
             onPress={() => void submit()}
-            disabled={!reason}
+            disabled={!reason || !id || !me}
             loading={busy}
           />
         </View>

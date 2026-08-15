@@ -3,7 +3,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { Platform } from 'react-native';
 import type { ReactNode } from 'react';
 
-import { api, onSessionExpired, setSession as setApiSession } from '@/lib/api';
+import {
+  api,
+  onSessionExpired,
+  sessionRestored,
+  setSession as setApiSession,
+} from '@/lib/api';
 
 /**
  * The signed-in session (§3, §12).
@@ -96,14 +101,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     (async () => {
       const raw = await store.get().catch(() => null);
+
       if (raw) {
         try {
           setApiSession(JSON.parse(raw) as Tokens);
-          await refreshMe();
         } catch {
           await store.clear().catch(() => {});
         }
       }
+
+      // Open the gate before the first authenticated read, not after:
+      // `refreshMe` is itself an authenticated request and would deadlock
+      // behind its own barrier.
+      sessionRestored();
+
+      if (raw) await refreshMe();
       if (!cancelled) setReady(true);
     })();
 

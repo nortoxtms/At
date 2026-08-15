@@ -1,13 +1,14 @@
-import { DISCIPLINE_LABEL_TR, SEX_LABEL_TR } from '@only-horses/shared-types';
+import { SEX_LABEL_TR } from '@only-horses/shared-types';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { Txt } from '@/components/Text';
 import { Choice, Wizard } from '@/components/Wizard';
 import { Card, Chip, DataRow, Field } from '@/components/ui';
 import { api } from '@/lib/api';
-import { DISCIPLINES } from '@/lib/catalog';
+import { loadBreeds, loadDisciplines } from '@/lib/reference';
+import { useAsync } from '@/lib/useAsync';
 import { useSession } from '@/lib/session';
 import { theme } from '@/theme/tokens';
 
@@ -40,11 +41,26 @@ export default function NewHorseWizard() {
   const [birthYear, setBirthYear] = useState('');
   const [height, setHeight] = useState('');
   const [color, setColor] = useState<(typeof COLORS)[number] | null>(null);
-  const [breed, setBreed] = useState('');
+  const [breed, setBreed] = useState<string | null>(null);
+  const [breedQuery, setBreedQuery] = useState('');
   const [disciplines, setDisciplines] = useState<string[]>([]);
   const [passport, setPassport] = useState('');
   const [microchip, setMicrochip] = useState('');
   const [about, setAbout] = useState('');
+
+  const { data: breedTable } = useAsync(() => loadBreeds(), []);
+  const { data: disciplineTable } = useAsync(() => loadDisciplines(), []);
+
+  // §7's breed table is ~120 rows. A chip wall is unusable and a dropdown on a
+  // phone is worse, so it filters as you type and shows the first dozen.
+  const breedMatches = useMemo(() => {
+    const table = breedTable ?? [];
+    const needle = breedQuery.trim().toLocaleLowerCase('tr');
+    const matched = needle
+      ? table.filter((entry) => entry.name.toLocaleLowerCase('tr').includes(needle))
+      : table;
+    return matched.slice(0, 12);
+  }, [breedTable, breedQuery]);
 
   const year = Number(birthYear);
   const yearValid =
@@ -64,18 +80,23 @@ export default function NewHorseWizard() {
 
     const result = await api<{ id: string }>('/horses', {
       method: 'POST',
+      // Every optional field in `createHorseSchema` is `.optional()`, not
+      // `.nullish()` — sending null where the key could be omitted fails
+      // validation, and the wizard shows the 400 as "Bir şeyler ters gitti".
       body: JSON.stringify({
         name: name.trim(),
         sex,
-        dateOfBirth: birthYear ? `${birthYear}-01-01` : null,
-        birthYearEstimated: !!birthYear,
-        heightCm: height ? Number(height) : null,
-        color,
-        breedName: breed || null,
+        ...(birthYear
+          ? { dateOfBirth: `${birthYear}-01-01`, birthYearEstimated: true }
+          : {}),
+        ...(height ? { heightCm: Number(height) } : {}),
+        ...(color ? { color } : {}),
+        ...(breed ? { breedId: breed } : {}),
         disciplines,
-        passportNumber: passport || null,
-        microchipNumber: microchip || null,
-        about: about || null,
+        ...(passport.trim() ? { passportNumber: passport.trim() } : {}),
+        ...(microchip.trim() ? { microchipNumber: microchip.trim() } : {}),
+        ...(about.trim() ? { about: about.trim() } : {}),
+        currentCountry: 'TR',
       }),
     });
 
@@ -162,18 +183,47 @@ export default function NewHorseWizard() {
             placeholder="165"
           />
           <Choice label="Don" options={COLORS} value={color} onChange={setColor} />
-          <Field label="Irk" value={breed} onChangeText={setBreed} placeholder="Arap" />
+
+          <View style={{ gap: theme.space.md }}>
+            <Field
+              label="Irk"
+              value={breedQuery}
+              onChangeText={(value) => {
+                setBreedQuery(value);
+                setBreed(null);
+              }}
+              placeholder="Ara: Arap, Haflinger, Uzunyayla…"
+              hint={
+                breed
+                  ? `Seçili: ${breedTable?.find((entry) => entry.code === breed)?.name ?? breed}`
+                  : 'Listeden seç — serbest yazı kaydedilmez.'
+              }
+            />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.sm }}>
+              {breedMatches.map((entry) => (
+                <Chip
+                  key={entry.code}
+                  label={entry.name}
+                  selected={breed === entry.code}
+                  onPress={() => {
+                    setBreed(entry.code);
+                    setBreedQuery(entry.name);
+                  }}
+                />
+              ))}
+            </View>
+          </View>
         </View>
       ) : null}
 
       {step === 3 ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.sm }}>
-          {DISCIPLINES.map((value) => (
+          {(disciplineTable ?? []).map((entry) => (
             <Chip
-              key={value}
-              label={DISCIPLINE_LABEL_TR[value] ?? value}
-              selected={disciplines.includes(value)}
-              onPress={() => toggleDiscipline(value)}
+              key={entry.code}
+              label={entry.name}
+              selected={disciplines.includes(entry.code)}
+              onPress={() => toggleDiscipline(entry.code)}
             />
           ))}
         </View>
@@ -215,12 +265,20 @@ export default function NewHorseWizard() {
             <DataRow label="Doğum yılı" value={birthYear || 'Bilinmiyor'} />
             <DataRow label="Cidago" value={height ? `${height} cm` : '—'} />
             <DataRow label="Don" value={color ?? '—'} />
-            <DataRow label="Irk" value={breed || '—'} />
+            <DataRow
+              label="Irk"
+              value={breedTable?.find((entry) => entry.code === breed)?.name ?? '—'}
+            />
             <DataRow
               label="Disiplinler"
               value={
                 disciplines.length
-                  ? disciplines.map((value) => DISCIPLINE_LABEL_TR[value] ?? value).join(', ')
+                  ? disciplines
+                      .map(
+                        (code) =>
+                          (disciplineTable ?? []).find((entry) => entry.code === code)?.name ?? code,
+                      )
+                      .join(', ')
                   : '—'
               }
             />

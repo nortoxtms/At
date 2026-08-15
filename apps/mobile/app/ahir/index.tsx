@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LISTING_TYPE_LABEL_TR, SEX_LABEL_TR } from '@only-horses/shared-types';
+import { SEX_LABEL_TR } from '@only-horses/shared-types';
 import { useRouter } from 'expo-router';
 import { FlatList, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { Txt } from '@/components/Text';
 import { BackButton, DemoNotice, EmptyState, Loading } from '@/components/ui';
 import { SAMPLE_STABLE, type SampleHorse } from '@/content/sample';
 import { api } from '@/lib/api';
+import type { MyHorse } from '@/lib/endpoints';
 import { washFromBlurhash } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
@@ -23,35 +24,30 @@ import { theme } from '@/theme/tokens';
  * record is the product — collapses the moment this screen starts behaving
  * like a seller dashboard.
  */
-interface ApiHorse {
-  id: string;
-  name: string;
-  slug: string;
-  sex: string;
-  date_of_birth: string | null;
-  height_cm: string | null;
-  breed_name_tr: string | null;
-  color: string | null;
-  disciplines: string[] | null;
-  cover_blurhash: string | null;
-  active_listing_type: string | null;
+interface StableRow extends SampleHorse {
+  nextDueOn: string | null;
+  nextDueTitle: string | null;
+  listed: boolean;
 }
 
-function normalise(horse: ApiHorse): SampleHorse {
-  const year = horse.date_of_birth ? new Date(horse.date_of_birth).getFullYear() : null;
+function normalise(horse: MyHorse): StableRow {
+  const year = horse.dateOfBirth ? new Date(horse.dateOfBirth).getFullYear() : null;
 
   return {
     id: horse.id,
     name: horse.name,
-    slug: horse.slug,
+    slug: horse.slug ?? horse.id,
     sex: horse.sex,
     ageYears: year ? Math.max(0, new Date().getFullYear() - year) : 0,
-    heightCm: horse.height_cm ? Math.round(Number(horse.height_cm)) : 0,
-    breed: horse.breed_name_tr ?? '',
+    heightCm: horse.heightCm ? Math.round(Number(horse.heightCm)) : 0,
+    breed: horse.breedName ?? horse.breedId ?? '',
     color: horse.color ?? '',
-    disciplines: horse.disciplines ?? [],
-    blurhash: horse.cover_blurhash,
-    listedAs: horse.active_listing_type,
+    disciplines: [],
+    blurhash: horse.coverBlurhash,
+    listedAs: null,
+    listed: !!horse.activeListingId,
+    nextDueOn: horse.nextDueOn,
+    nextDueTitle: horse.nextDueTitle,
   };
 }
 
@@ -61,11 +57,14 @@ export default function StableScreen() {
   const { me } = useSession();
 
   const { data, loading } = useAsync(async () => {
-    const result = await api<ApiHorse[]>('/me/horses');
+    const result = await api<MyHorse[]>('/me/horses');
     if (result.ok && Array.isArray(result.data)) {
       return { data: result.data.map(normalise), source: 'live' as const };
     }
-    return { data: me ? [] : SAMPLE_STABLE, source: me ? ('live' as const) : ('demo' as const) };
+    return {
+      data: me ? [] : (SAMPLE_STABLE as StableRow[]),
+      source: me ? ('live' as const) : ('demo' as const),
+    };
   }, [me?.id]);
 
   const horses = data?.data ?? [];
@@ -159,9 +158,27 @@ export default function StableScreen() {
                     .filter(Boolean)
                     .join(' · ')}
                 </Txt>
-                {item.listedAs ? (
+                {item.listed ? (
                   <Txt variant="caption" color={theme.color.goldSoft} display={false}>
-                    {LISTING_TYPE_LABEL_TR[item.listedAs] ?? item.listedAs} ilanı yayında
+                    İlanı yayında
+                  </Txt>
+                ) : null}
+
+                {/* §9's reminder, where the owner will actually see it. */}
+                {item.nextDueOn ? (
+                  <Txt
+                    variant="caption"
+                    display={false}
+                    color={
+                      item.nextDueOn < new Date().toISOString().slice(0, 10)
+                        ? theme.color.warning
+                        : theme.color.textSecondary
+                    }
+                  >
+                    {item.nextDueTitle ?? 'Bakım'} ·{' '}
+                    {new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long' }).format(
+                      new Date(item.nextDueOn),
+                    )}
                   </Txt>
                 ) : null}
               </View>

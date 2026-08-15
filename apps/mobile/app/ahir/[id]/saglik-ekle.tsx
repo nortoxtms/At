@@ -7,8 +7,8 @@ import { Button } from '@/components/Button';
 import { Txt } from '@/components/Text';
 import { Choice } from '@/components/Wizard';
 import { BackButton, Card, Field } from '@/components/ui';
-import { HEALTH_KIND_LABEL_TR, type SampleHealthRecord } from '@/content/sample';
 import { api } from '@/lib/api';
+import { HEALTH_TYPES, REMINDER_INTERVALS } from '@/lib/endpoints';
 import { theme } from '@/theme/tokens';
 
 /**
@@ -19,22 +19,17 @@ import { theme } from '@/theme/tokens';
  * "24 September". Converting the interval to a date here means the reminder
  * §9 fires is exact while the thing the owner typed stays natural.
  */
-const KINDS = ['vaccination', 'farrier', 'dental', 'vet_visit', 'deworming'] as const;
-
-const INTERVALS: { label: string; days: number | null }[] = [
-  { label: 'Yok', days: null },
-  { label: '6 hafta', days: 42 },
-  { label: '3 ay', days: 91 },
-  { label: '6 ay', days: 182 },
-  { label: '1 yıl', days: 365 },
-];
+const KIND_IDS = HEALTH_TYPES.map((entry) => entry.id);
+const KIND_LABEL: Record<string, string> = Object.fromEntries(
+  HEALTH_TYPES.map((entry) => [entry.id, entry.label]),
+);
 
 export default function AddHealthRecordScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const [kind, setKind] = useState<SampleHealthRecord['kind'] | null>('vaccination');
+  const [kind, setKind] = useState<(typeof KIND_IDS)[number] | null>('vaccination');
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -45,7 +40,7 @@ export default function AddHealthRecordScreen() {
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(new Date(date).getTime());
 
   const nextDue = (() => {
-    const days = INTERVALS.find((entry) => entry.label === interval)?.days ?? null;
+    const days = REMINDER_INTERVALS.find((entry) => entry.label === interval)?.days ?? null;
     if (days === null || !dateValid) return null;
     const due = new Date(date);
     due.setDate(due.getDate() + days);
@@ -56,12 +51,14 @@ export default function AddHealthRecordScreen() {
     setSaving(true);
     setError(null);
 
-    const result = await api(`/horses/${id}/health-records`, {
+    const result = await api(`/horses/${id}/health`, {
       method: 'POST',
       body: JSON.stringify({
-        kind,
+        type: kind,
         title: title.trim(),
-        notes: notes.trim() || null,
+        // The schema takes `notes` as optional, not nullable — sending null
+        // fails validation where omitting the key succeeds.
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
         performedOn: date,
         nextDueOn: nextDue,
       }),
@@ -98,10 +95,10 @@ export default function AddHealthRecordScreen() {
 
       <Choice
         label="Tür"
-        options={KINDS}
+        options={KIND_IDS}
         value={kind}
         onChange={setKind}
-        render={(option) => HEALTH_KIND_LABEL_TR[option] ?? option}
+        render={(option) => KIND_LABEL[option] ?? option}
       />
 
       <Field label="Başlık" value={title} onChangeText={setTitle} placeholder="İnfluenza aşısı" />
@@ -117,7 +114,7 @@ export default function AddHealthRecordScreen() {
 
       <Choice
         label="Sıradaki ne zaman?"
-        options={INTERVALS.map((entry) => entry.label)}
+        options={REMINDER_INTERVALS.map((entry) => entry.label)}
         value={interval}
         onChange={setInterval}
       />

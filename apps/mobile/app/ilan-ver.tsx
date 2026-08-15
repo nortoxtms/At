@@ -10,6 +10,7 @@ import { Choice, Wizard } from '@/components/Wizard';
 import { Card, DataRow, EmptyState, Field, Loading } from '@/components/ui';
 import { SAMPLE_STABLE, type SampleHorse } from '@/content/sample';
 import { api } from '@/lib/api';
+import type { MyHorse } from '@/lib/endpoints';
 import { formatPrice, washFromBlurhash } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
@@ -36,12 +37,7 @@ const PRICE_TYPE_LABEL: Record<string, string> = {
   on_request: 'Sorunuz',
 };
 
-interface ApiHorse {
-  id: string;
-  name: string;
-  sex: string;
-  cover_blurhash: string | null;
-}
+
 
 export default function ListingComposer() {
   const router = useRouter();
@@ -63,7 +59,7 @@ export default function ListingComposer() {
   const [ppe, setPpe] = useState(true);
 
   const { data: stable, loading } = useAsync(async () => {
-    const result = await api<ApiHorse[]>('/me/horses');
+    const result = await api<MyHorse[]>('/me/horses');
     if (result.ok && Array.isArray(result.data)) {
       return result.data.map<SampleHorse>((horse) => ({
         id: horse.id,
@@ -75,7 +71,7 @@ export default function ListingComposer() {
         breed: '',
         color: '',
         disciplines: [],
-        blurhash: horse.cover_blurhash,
+        blurhash: horse.coverBlurhash,
         listedAs: null,
       }));
     }
@@ -128,15 +124,19 @@ export default function ListingComposer() {
 
     const result = await api<{ id: string; slug: string }>('/listings', {
       method: 'POST',
+      // `countryCode` is required by `createListingSchema` and the launch
+      // region is TR (§1.2); `priceAmount` is `.optional()`, so "fiyat
+      // sorunuz" omits the key rather than sending null.
       body: JSON.stringify({
         horseId,
         type,
         title: title.trim(),
         description: description.trim(),
         priceType,
-        priceAmount: priceType === 'on_request' ? null : Number(price),
+        ...(priceType === 'on_request' ? {} : { priceAmount: Number(price) }),
         priceCurrency: 'TRY',
-        city: city || null,
+        countryCode: 'TR',
+        ...(city.trim() ? { city: city.trim() } : {}),
         trialAllowed: trial,
         ppeWelcome: ppe,
       }),

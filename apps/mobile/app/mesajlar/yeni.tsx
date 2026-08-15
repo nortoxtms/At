@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { Txt } from '@/components/Text';
-import { BackButton, Card, Field, Loading } from '@/components/ui';
+import { BackButton, Card, EmptyState, Field, Loading } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getListing } from '@/lib/catalog';
 import { formatPrice } from '@/lib/format';
+import { useSession } from '@/lib/session';
 import { useAsync } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
@@ -20,10 +21,16 @@ import { theme } from '@/theme/tokens';
  * inbox. The draft names the horse and asks the two questions that actually
  * start a conversation — the text is editable, so a person who knows what to
  * ask is not made to delete boilerplate first.
+ *
+ * §12's POST /conversations takes the counterparty's profile id, not the
+ * listing's. The seller comes from the listing record, so this screen cannot
+ * open without one — which is correct: §16 has no "message a stranger about
+ * nothing" path, every thread is about something.
  */
 export default function NewMessageScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { me } = useSession();
   const { listing: slug } = useLocalSearchParams<{ listing?: string }>();
 
   const { data, loading } = useAsync(
@@ -32,6 +39,7 @@ export default function NewMessageScreen() {
   );
 
   const listing = data?.data ?? null;
+  const sellerId = (listing as { seller_profile_id?: string } | null)?.seller_profile_id ?? null;
 
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
@@ -49,15 +57,18 @@ export default function NewMessageScreen() {
   }
 
   const send = async () => {
+    if (!sellerId) return;
+
     setSending(true);
     setError(null);
 
-    const result = await api<{ threadId: string }>('/messages/threads', {
+    const result = await api<{ conversationId: string; messageId: string }>('/conversations', {
       method: 'POST',
       body: JSON.stringify({
-        subjectType: 'listing',
-        subjectId: listing?.id ?? null,
-        body: body.trim(),
+        contextType: 'listing',
+        contextId: listing?.id,
+        participantId: sellerId,
+        firstMessage: body.trim(),
       }),
     });
 
@@ -68,8 +79,36 @@ export default function NewMessageScreen() {
       return;
     }
 
-    router.replace(`/mesajlar/${result.data.threadId}`);
+    router.replace(`/mesajlar/${result.data.conversationId}`);
   };
+
+  if (!me) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.color.bg, justifyContent: 'center', padding: theme.screenPadding }}>
+        <EmptyState
+          icon="person-outline"
+          title="Önce giriş yap"
+          body="Mesaj göndermek için hesabına girmen gerekiyor."
+          action={<Button label="Giriş yap" full={false} onPress={() => router.replace('/auth')} />}
+        />
+      </View>
+    );
+  }
+
+  if (!listing || !sellerId) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.color.bg, justifyContent: 'center', padding: theme.screenPadding }}>
+        <EmptyState
+          icon="chatbubble-outline"
+          title="Konuşma bir ilandan başlar"
+          body="İlgilendiğin ilanı aç ve oradan satıcıya yaz."
+          action={
+            <Button label="İlanlara bak" full={false} onPress={() => router.replace('/(tabs)/ara')} />
+          }
+        />
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -90,18 +129,16 @@ export default function NewMessageScreen() {
         <View style={{ width: theme.metric.minTouchTarget }} />
       </View>
 
-      {listing ? (
-        <Card style={{ gap: 2 }}>
-          <Txt variant="h3" numberOfLines={1}>
-            {listing.horse_name}
-          </Txt>
-          <Txt variant="small" color={theme.color.textSecondary} display={false}>
-            {listing.seller_name}
-            {' · '}
-            {formatPrice(listing.price_amount, listing.price_currency, listing.price_type)}
-          </Txt>
-        </Card>
-      ) : null}
+      <Card style={{ gap: 2 }}>
+        <Txt variant="h3" numberOfLines={1}>
+          {listing.horse_name}
+        </Txt>
+        <Txt variant="small" color={theme.color.textSecondary} display={false}>
+          {listing.seller_name}
+          {' · '}
+          {formatPrice(listing.price_amount, listing.price_currency, listing.price_type)}
+        </Txt>
+      </Card>
 
       <Field
         label="Mesaj"

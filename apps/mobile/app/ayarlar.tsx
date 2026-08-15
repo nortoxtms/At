@@ -172,7 +172,7 @@ export default function SettingsScreen() {
                   full={false}
                   style={{ flex: 1 }}
                   onPress={async () => {
-                    await api('/me', { method: 'DELETE' });
+                    await api('/me/account', { method: 'DELETE' });
                     await signOut();
                     router.replace('/(tabs)');
                   }}

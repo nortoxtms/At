@@ -14,6 +14,7 @@ import { Badge } from '@/components/ListingCard';
 import { Button } from '@/components/Button';
 import { Txt } from '@/components/Text';
 import { Avatar, Card, DataRow, DemoNotice, EmptyState, Loading } from '@/components/ui';
+import { api } from '@/lib/api';
 import { getListing } from '@/lib/catalog';
 import { formatPrice, washFromBlurhash } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
@@ -38,6 +39,7 @@ export default function ListingScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { me } = useSession();
   const [saved, setSaved] = useState(false);
+  const [savingItem, setSavingItem] = useState(false);
 
   const { data, loading } = useAsync(() => getListing(String(slug)), [slug]);
   const listing = data?.data ?? null;
@@ -61,6 +63,31 @@ export default function ListingScreen() {
   const price = formatPrice(listing.price_amount, listing.price_currency, listing.price_type);
   const sellerVerified =
     listing.seller_verification !== 'none' && listing.seller_verification !== 'email_verified';
+
+  /**
+   * §10's saved items live on the account, so this is a request, not a local
+   * toggle. The optimistic flip is reverted when the request fails — a
+   * bookmark that appears to stick and is gone tomorrow is worse than one
+   * that visibly refuses.
+   */
+  const toggleSave = async () => {
+    if (!me) return router.push('/auth');
+    if (savingItem) return;
+
+    const next = !saved;
+    setSaved(next);
+    setSavingItem(true);
+
+    const result = next
+      ? await api('/saved', {
+          method: 'POST',
+          body: JSON.stringify({ itemType: 'listing', itemId: listing.id }),
+        })
+      : await api(`/saved/listing/${listing.id}`, { method: 'DELETE' });
+
+    setSavingItem(false);
+    if (!result.ok) setSaved(!next);
+  };
 
   const age = listing.date_of_birth
     ? Math.max(0, new Date().getFullYear() - new Date(listing.date_of_birth).getFullYear())
@@ -88,10 +115,14 @@ export default function ListingScreen() {
               <RoundButton
                 icon={saved ? 'bookmark' : 'bookmark-outline'}
                 label={saved ? 'Kaydedildi' : 'Kaydet'}
-                onPress={() => setSaved((value) => !value)}
+                onPress={() => void toggleSave()}
                 active={saved}
               />
-              <RoundButton icon="flag-outline" label="Bildir" onPress={() => router.push('/bildir')} />
+              <RoundButton
+                icon="flag-outline"
+                label="Bildir"
+                onPress={() => router.push(`/bildir?type=listing&id=${listing.id}`)}
+              />
             </View>
           </View>
 

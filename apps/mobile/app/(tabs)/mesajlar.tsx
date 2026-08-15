@@ -10,7 +10,7 @@ import { api } from '@/lib/api';
 import type { ConversationSummary } from '@/lib/endpoints';
 import { relativeTime } from '@/lib/format';
 import { useSession } from '@/lib/session';
-import { useAsync } from '@/lib/useAsync';
+import { useAsync, useReloadOnFocus } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
 /**
@@ -52,13 +52,16 @@ export default function MessagesScreen() {
   const router = useRouter();
   const { me, ready } = useSession();
 
-  const { data, loading } = useAsync(async () => {
+  const { data, loading, reload } = useAsync(async () => {
     const result = await api<ConversationSummary[]>('/conversations');
     if (result.ok && Array.isArray(result.data)) {
       return { data: result.data.map(normalise), source: 'live' as const };
     }
     return { data: SAMPLE_THREADS, source: 'demo' as const };
   }, [me?.id]);
+
+  // Coming back from a screen that added something must show it.
+  useReloadOnFocus(reload);
 
   const threads = data?.data ?? [];
 

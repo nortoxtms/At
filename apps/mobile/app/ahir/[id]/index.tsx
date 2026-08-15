@@ -15,7 +15,7 @@ import { SAMPLE_HEALTH, SAMPLE_STABLE } from '@/content/sample';
 import { api } from '@/lib/api';
 import { washFromBlurhash } from '@/lib/format';
 import { listHorseMedia } from '@/lib/media';
-import { useAsync } from '@/lib/useAsync';
+import { useAsync, useReloadOnFocus } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
 /**
@@ -67,6 +67,9 @@ export default function HorseScreen() {
       source: 'demo' as const,
     };
   }, [id]);
+
+  // Coming back from a screen that added something must show it.
+  useReloadOnFocus(reload);
 
   if (loading) return <Loading />;
 
@@ -187,6 +190,17 @@ export default function HorseScreen() {
             />
           </View>
 
+          {/*
+            §6's transfer, at the bottom and on its own. It is the action that
+            hands the record away — grouping it with "add a photo" is how it
+            gets pressed by accident.
+          */}
+          <Button
+            label="Yeni sahibine devret"
+            variant="secondary"
+            onPress={() => router.push(`/ahir/${id}/devret`)}
+          />
+
           <Card>
             <Txt variant="h3" style={{ marginBottom: theme.space.sm }}>
               Künye
@@ -201,7 +215,22 @@ export default function HorseScreen() {
           </Card>
 
           <View>
-            <Txt variant="h2">Geçmiş</Txt>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: theme.space.sm,
+              }}
+            >
+              <Txt variant="h2">Geçmiş</Txt>
+              <Button
+                label="Yarışma ekle"
+                variant="ghost"
+                full={false}
+                onPress={() => router.push(`/ahir/${id}/yarisma-ekle`)}
+              />
+            </View>
             <Txt variant="small" color={theme.color.textSecondary} display={false}>
               Kayıt atla birlikte gider. Sahiplik değişse de bu satırlar kalır.
             </Txt>

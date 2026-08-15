@@ -10,7 +10,7 @@ import { BackButton, Card, EmptyState, Loading } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatPrice } from '@/lib/format';
 import { useSession } from '@/lib/session';
-import { useAsync } from '@/lib/useAsync';
+import { useAsync, useReloadOnFocus } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
 /**
@@ -58,6 +58,9 @@ export default function MyListingsScreen() {
     const result = await api<MyListing[]>('/me/listings');
     return result.ok && Array.isArray(result.data) ? result.data : [];
   }, [me?.id]);
+
+  // Coming back from a screen that added something must show it.
+  useReloadOnFocus(reload);
 
   const listings = data ?? [];
 

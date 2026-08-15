@@ -10,7 +10,7 @@ import { SAMPLE_HEALTH, type SampleHealthRecord } from '@/content/sample';
 import { api } from '@/lib/api';
 import { HEALTH_TYPES, type HealthRecord } from '@/lib/endpoints';
 import { theme } from '@/theme/tokens';
-import { useAsync } from '@/lib/useAsync';
+import { useAsync, useReloadOnFocus } from '@/lib/useAsync';
 
 /**
  * S12 — health records, and the reminders §9 hangs off them.
@@ -65,13 +65,16 @@ export default function HealthScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { data, loading } = useAsync(async () => {
+  const { data, loading, reload } = useAsync(async () => {
     const result = await api<HealthRecord[]>(`/horses/${id}/health`);
     if (result.ok && Array.isArray(result.data)) {
       return { data: result.data.map(normalise), source: 'live' as const };
     }
     return { data: SAMPLE_HEALTH, source: 'demo' as const };
   }, [id]);
+
+  // Coming back from a screen that added something must show it.
+  useReloadOnFocus(reload);
 
   const today = new Date().toISOString().slice(0, 10);
 

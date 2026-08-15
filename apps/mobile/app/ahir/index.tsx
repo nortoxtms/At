@@ -12,7 +12,7 @@ import { api } from '@/lib/api';
 import type { MyHorse } from '@/lib/endpoints';
 import { washFromBlurhash } from '@/lib/format';
 import { useSession } from '@/lib/session';
-import { useAsync } from '@/lib/useAsync';
+import { useAsync, useReloadOnFocus } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
 /**
@@ -56,7 +56,7 @@ export default function StableScreen() {
   const router = useRouter();
   const { me } = useSession();
 
-  const { data, loading } = useAsync(async () => {
+  const { data, loading, reload } = useAsync(async () => {
     const result = await api<MyHorse[]>('/me/horses');
     if (result.ok && Array.isArray(result.data)) {
       return { data: result.data.map(normalise), source: 'live' as const };
@@ -66,6 +66,9 @@ export default function StableScreen() {
       source: me ? ('live' as const) : ('demo' as const),
     };
   }, [me?.id]);
+
+  // Coming back from a screen that added something must show it.
+  useReloadOnFocus(reload);
 
   const horses = data?.data ?? [];
 

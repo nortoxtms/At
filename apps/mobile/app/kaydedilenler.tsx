@@ -8,7 +8,7 @@ import { BackButton, Card, EmptyState, Loading } from '@/components/ui';
 import { api } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useSession } from '@/lib/session';
-import { useAsync } from '@/lib/useAsync';
+import { useAsync, useReloadOnFocus } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
 /**
@@ -49,11 +49,14 @@ export default function SavedScreen() {
   const router = useRouter();
   const { me, ready } = useSession();
 
-  const { data, loading } = useAsync(async () => {
+  const { data, loading, reload } = useAsync(async () => {
     if (!me) return [];
     const result = await api<SavedRow[]>('/saved');
     return result.ok && Array.isArray(result.data) ? result.data : [];
   }, [me?.id]);
+
+  // Coming back from a screen that added something must show it.
+  useReloadOnFocus(reload);
 
   const saved = data ?? [];
 

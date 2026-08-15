@@ -27,19 +27,28 @@ Each milestone's Definition of Done (§23) has an executable check —
 | **M5 — Monetization** | Done · `scripts/m5-acceptance.sh` |
 | M6 — Polish & launch | In progress · `scripts/m6-acceptance.sh` · see [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) |
 
-M6's DoD is "§24 fully green", and it is not: **19 of 29 criteria are verified,
-7 are implemented but unmeasured, and 3 need a released app and production
-traffic.** [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) walks all 29 with evidence.
+M6's DoD is "§24 fully green", and it is not: **21 of 29 criteria are verified,
+5 are partly verified, and 3 need a released app or production traffic.** [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) walks all 29 with evidence.
 
 Other known gaps, stated plainly:
 
-- **There is no mobile app.** Not "unbuilt" — `apps/mobile` does not exist and
-  never has. ADR-0002 chose React Native and nothing was written against that
-  choice. Everything §18.2 places in the app — signing in, a profile, your
-  listings, messaging, saved searches, notifications — therefore exists in the
-  API and in no client at all. Earlier revisions of this file and of
-  `docs/ACCEPTANCE.md` said the app "type-checks"; that was false, and the
-  §24.17 row now says so.
+- **The mobile app exists and is verified against the API, but has never run
+  on a device.** There is no simulator here and no phone. What is verified is
+  Expo's web target — the same React tree, components and tokens, rendered by
+  react-native-web: `scripts/mobile-e2e.mjs` walks 25 signed-in steps in
+  Chromium against the live API (register, role, §3.3's publishing gate, add a
+  horse, upload a photo, health log, competition result, transfer, save a
+  listing, message a seller, apply to a job, saved search, sign out and back
+  in) and `scripts/contrast-audit.mjs` measures WCAG AA on 27 screens. Both run
+  in CI. What that does **not** cover is everything native: the keychain, push
+  notifications, the Apple and Google sign-in sheets, the camera, and the build
+  itself. Nothing here should be read as "ships to the App Store".
+- **Three things are deliberately not wired**, all for the same reason — they
+  need credentials this repository must not carry (§24.24): the OAuth
+  providers, the identity-verification provider (§17), and payment (ADR-0007).
+  Each has a screen that says so rather than a button that fails. Password
+  reset is a fourth: there is no reset endpoint and no mail sender, and the
+  screen says that instead of showing "gönderildi".
 - **There is no admin console.** `apps/admin` is an empty directory. §22's
   metrics and the moderation queue are API endpoints with no screen.
 - The Typesense adapter has never been run (ADR-0005, ADR-0006); the measured
@@ -48,7 +57,7 @@ Other known gaps, stated plainly:
   against Stripe test mode before launch.
 
 What does exist and is verified: the API (139 routes), the database and its
-RLS, the business rules, and the web app — the marketing pages, the
+RLS, the business rules, the mobile app's screens and flows, and the web app — the marketing pages, the
 listing/service/job indexes and detail pages, pricing, the policy pages, and
 signed-in screens for your account, horses, listings and messages. Session
 tokens are httpOnly cookies, so no token is reachable from script.
@@ -76,10 +85,11 @@ PostHog, Sentry, Cloudflare Images.
 apps/api          NestJS — owns all business logic (spec §4)
 apps/web          Next.js App Router — SSR listing pages for SEO (§19)
 apps/admin        empty — §22's console has not been started
-apps/mobile       does not exist — see "known gaps" above
+apps/mobile       Expo Router (ADR-0002) — §18.2's screens; see "known gaps"
 packages/
-  shared-types    zod schemas, §20 design tokens, and the business rules that
-                  the API and both clients must agree on
+  shared-types    zod schemas, §20 design tokens, the Turkish enum labels, and
+                  the business rules the API and both clients must agree on
+  demo-content    the exported dataset the web preview and the app fall back to
   config          Tailwind preset derived from the design tokens
 db/
   migrations      the §7 schema, append-only and checksummed

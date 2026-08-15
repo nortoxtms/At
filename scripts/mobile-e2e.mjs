@@ -232,6 +232,33 @@ if (registered) {
     if (!painted) throw new Error('the photo frame has no image behind it');
   });
 
+  await step('a competition result joins the horse timeline', async () => {
+    await go('/ahir');
+    await tap(horseName);
+    await page.waitForTimeout(2500);
+    await tap('Yarışma ekle');
+    await page.waitForTimeout(1500);
+    await byLabel('Yarışma').fill('Bölgesel Engel Atlama');
+    await byLabel('Derece').fill('3');
+    await tap('Kaydet');
+    await page.waitForTimeout(3000);
+    // Back on the record, the result must be in §20.4's timeline.
+    await expectScreen('Bölgesel Engel Atlama');
+  });
+
+  await step('§6 transfer is reachable and warns before handing the record away', async () => {
+    await go('/ahir');
+    await tap(horseName);
+    await page.waitForTimeout(2500);
+    await tap('Yeni sahibine devret');
+    await page.waitForTimeout(1500);
+    await expectScreen('Kayıt atla birlikte gider');
+    await byLabel('Yeni sahibin e-postası').fill('alici@onlyhorses.test');
+    await tap('Devri başlat');
+    await page.waitForTimeout(800);
+    await expectScreen('Emin misin');
+  });
+
   await step('saving a listing persists to the account', async () => {
     await go('/ara');
     await page.getByRole('link').first().click();

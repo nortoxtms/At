@@ -10,7 +10,7 @@ import { Txt } from '@/components/Text';
 import { BackButton, Card, EmptyState, Loading } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useSession } from '@/lib/session';
-import { useAsync } from '@/lib/useAsync';
+import { useAsync, useReloadOnFocus } from '@/lib/useAsync';
 import { theme } from '@/theme/tokens';
 
 /**
@@ -69,6 +69,9 @@ export default function SavedSearchesScreen() {
     const result = await api<SavedSearch[]>('/saved-searches');
     return result.ok && Array.isArray(result.data) ? result.data : [];
   }, [me?.id]);
+
+  // Coming back from a screen that added something must show it.
+  useReloadOnFocus(reload);
 
   const searches = data ?? [];
 

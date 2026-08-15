@@ -115,6 +115,8 @@ export default function RolePicker() {
                 name={on ? 'checkmark-circle' : 'ellipse-outline'}
                 size={22}
                 color={on ? theme.color.goldSoft : theme.color.textSecondary}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
               />
             </Pressable>
           );

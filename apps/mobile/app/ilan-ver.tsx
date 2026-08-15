@@ -189,6 +189,11 @@ export default function ListingComposer() {
               <Pressable
                 key={entry.id}
                 accessibilityRole="radio"
+                // Named explicitly. Without it the accessible name is computed
+                // from the contents, which include the selection icon's glyph —
+                // so the row announces the horse's name plus a private-use
+                // character, and nothing can address it by name.
+                accessibilityLabel={entry.name}
                 accessibilityState={{ selected: horseId === entry.id }}
                 onPress={() => setHorseId(entry.id)}
                 style={{

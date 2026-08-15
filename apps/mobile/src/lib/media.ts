@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 
-import { api, API_URL } from '@/lib/api';
+import { api, API_URL, isDemo } from '@/lib/api';
+import { getState, nextId, persist } from '@/lib/demo-store';
 
 /**
  * §10.1's upload, from the phone.
@@ -79,6 +80,20 @@ export async function uploadImage(asset: {
   mimeType?: string | null;
   fileSize?: number | null;
 }): Promise<UploadResult> {
+  // In demo mode there is no bucket, so the picker's own URI is the photo.
+  // Reading it into a data URI is what makes it survive a relaunch — a
+  // `file://` or `blob:` reference does not, and a gallery of broken frames
+  // the next morning is worse than no gallery.
+  if (isDemo()) {
+    const mediaId = nextId('media');
+    const uri = await toDataUri(asset.uri).catch(() => asset.uri);
+
+    getState().media.push({ mediaId, horseId: '', uri, createdAt: new Date().toISOString() });
+    await persist();
+
+    return { ok: true, mediaId };
+  }
+
   // The picker does not always report a size or a type, and the intent schema
   // requires both. Reading the blob is the only way to know for certain, and
   // it is needed for the PUT anyway.
@@ -156,3 +171,24 @@ export async function removeHorseMedia(horseId: string, mediaId: string): Promis
 }
 
 export { API_URL };
+
+/**
+ * Read a picked image into a data URI.
+ *
+ * The picker hands back a reference into the OS's own storage, which the app
+ * may not be able to read tomorrow — on web it is a `blob:` URL scoped to the
+ * page, and on device a cache path the system is free to reclaim. The demo has
+ * nowhere else to put the bytes, so it keeps them.
+ */
+async function toDataUri(uri: string): Promise<string> {
+  if (uri.startsWith('data:')) return uri;
+
+  const blob = await (await fetch(uri)).blob();
+
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read failed'));
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsDataURL(blob);
+  });
+}

@@ -9,6 +9,7 @@ import {
   sessionRestored,
   setSession as setApiSession,
 } from '@/lib/api';
+import { disableDemo, enableDemo, restoreDemo } from '@/lib/demo';
 
 /**
  * The signed-in session (§3, §12).
@@ -41,17 +42,24 @@ interface Tokens {
 interface SessionValue {
   me: Me | null;
   ready: boolean;
+  /** True while the app is answering itself instead of a server. */
+  demo: boolean;
   signIn: (tokens: Tokens) => Promise<void>;
   signOut: () => Promise<void>;
   refreshMe: () => Promise<void>;
+  startDemo: () => Promise<void>;
+  stopDemo: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionValue>({
   me: null,
   ready: false,
+  demo: false,
   signIn: async () => {},
   signOut: async () => {},
   refreshMe: async () => {},
+  startDemo: async () => {},
+  stopDemo: async () => {},
 });
 
 const store = {
@@ -72,6 +80,7 @@ const store = {
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [ready, setReady] = useState(false);
+  const [demo, setDemo] = useState(false);
 
   const refreshMe = useCallback(async () => {
     const result = await api<Me>('/me');
@@ -93,6 +102,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setMe(null);
   }, []);
 
+  /**
+   * §18.2 has no demo mode; the product needs one. Without a server the app is
+   * a set of empty screens, and "install it and see" is the whole point of a
+   * phone app. So this is a real account against a real (local) store — see
+   * `demo-api.ts` — and every screen shows a banner saying which one it is.
+   */
+  const startDemo = useCallback(async () => {
+    await enableDemo();
+    setDemo(true);
+    await refreshMe();
+  }, [refreshMe]);
+
+  const stopDemo = useCallback(async () => {
+    await disableDemo();
+    setDemo(false);
+    setMe(null);
+  }, []);
+
   // Rehydrate once. A token in the keychain is not proof of a live session —
   // it may have been revoked (§17) — so the app asks /me and believes the
   // answer rather than the storage.
@@ -100,6 +127,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     (async () => {
+      // Demo first: if it is on, nothing should touch the network at all.
+      if (await restoreDemo().catch(() => false)) {
+        setDemo(true);
+        sessionRestored();
+        await refreshMe();
+        if (!cancelled) setReady(true);
+        return;
+      }
+
       const raw = await store.get().catch(() => null);
 
       if (raw) {
@@ -130,8 +166,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [refreshMe]);
 
   const value = useMemo<SessionValue>(
-    () => ({ me, ready, signIn, signOut, refreshMe }),
-    [me, ready, signIn, signOut, refreshMe],
+    () => ({ me, ready, demo, signIn, signOut, refreshMe, startDemo, stopDemo }),
+    [me, ready, demo, signIn, signOut, refreshMe, startDemo, stopDemo],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

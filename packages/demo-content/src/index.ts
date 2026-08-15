@@ -1,3 +1,6 @@
+export * from './reference.js';
+export type { ReferenceItem } from './types.js';
+
 import type {
   JobSearchHit,
   ListingDetail,

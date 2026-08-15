@@ -29,7 +29,8 @@ type Mode = 'signIn' | 'signUp';
 
 export default function AuthScreen() {
   const router = useRouter();
-  const { signIn } = useSession();
+  const { signIn, startDemo } = useSession();
+  const [startingDemo, setStartingDemo] = useState(false);
 
   const [mode, setMode] = useState<Mode>('signIn');
   const [email, setEmail] = useState('');
@@ -180,6 +181,41 @@ export default function AuthScreen() {
         <View style={{ gap: theme.space.md }}>
           <SocialButton icon="logo-apple" label="Apple ile devam et" />
           <SocialButton icon="logo-google" label="Google ile devam et" />
+        </View>
+
+        {/*
+          The way in without a server.
+          Below the account options rather than above them: it is the way to
+          look at the product, not the way to use it. It is a real button and
+          not a link, because the thing most people arriving here actually want
+          is to see the app, and making them hunt for that is how they leave.
+        */}
+        <View
+          style={{
+            marginTop: theme.space.xl,
+            padding: theme.space.lg,
+            borderRadius: theme.radius.md,
+            borderWidth: 1,
+            borderColor: theme.color.goldMuted,
+            backgroundColor: theme.color.surface,
+            gap: theme.space.md,
+          }}
+        >
+          <Txt variant="h3">Sunucusuz dene</Txt>
+          <Txt variant="small" color={theme.color.textSecondary} display={false}>
+            Demo modunda uygulama tamamen çalışır: at kaydedebilir, fotoğraf
+            ekleyebilir, ilan verip yayına alabilir, mesajlaşabilirsin. Her şey
+            telefonunda kalır — internet ve hesap gerekmez.
+          </Txt>
+          <Button
+            label="Demo olarak gir"
+            loading={startingDemo}
+            onPress={async () => {
+              setStartingDemo(true);
+              await startDemo();
+              router.replace('/(tabs)');
+            }}
+          />
         </View>
 
         <Txt

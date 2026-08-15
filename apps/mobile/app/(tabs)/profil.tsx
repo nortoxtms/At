@@ -38,7 +38,7 @@ interface Dashboard {
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { me, ready, signOut } = useSession();
+  const { me, ready, demo, signOut, stopDemo, startDemo } = useSession();
 
   const { data: dashboard } = useAsync(async () => {
     if (!me) return null;
@@ -69,6 +69,14 @@ export default function ProfileScreen() {
             Atlarını kaydetmek, ilan vermek ve mesajlaşmak için hesabına gir.
           </Txt>
           <Button label="Giriş yap veya kaydol" onPress={() => router.push('/auth')} />
+          <Button
+            label="Demo olarak gir"
+            variant="secondary"
+            onPress={async () => {
+              await startDemo();
+              router.replace('/(tabs)');
+            }}
+          />
         </Card>
 
         <View style={{ marginTop: theme.space.xxl }}>
@@ -187,10 +195,10 @@ export default function ProfileScreen() {
       </View>
 
       <Button
-        label="Çıkış yap"
+        label={demo ? 'Demodan çık' : 'Çıkış yap'}
         variant="secondary"
         style={{ marginTop: theme.space.xl }}
-        onPress={() => void signOut()}
+        onPress={() => void (demo ? stopDemo() : signOut())}
       />
     </ScrollView>
   );

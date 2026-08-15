@@ -140,7 +140,14 @@ jobs:
             / /onboarding /auth /auth/rol /auth/parola /ara /filtreler \
             /ahir /ahir/yeni /ilan-ver /ilanlarim /kaydedilenler /aramalarim \
             /bildirimler /hizmetler /isler /uzmanlar /planlar /hakkinda \
-            /dogrulama /ayarlar /bildir /mesajlar /profil
+            /dogrulama /ayarlar /bildir /mesajlar /profil /demo
+
+      # The demo, with the API not merely absent but unreachable — every
+      # request to it is aborted, and any attempt fails the run. This is the
+      # check that keeps demo mode honest: a screen that quietly falls back to
+      # the network fails here rather than in front of someone.
+      - name: The demo works with no server
+        run: node scripts/mobile-demo-e2e.mjs http://localhost:4400
 
       # §18.3's floor, measured rather than asserted. AUDIT_SETTLE_MS is not
       # optional here: a client-rendered app's first frame is a splash screen
@@ -161,4 +168,4 @@ jobs:
             http://localhost:4400/planlar http://localhost:4400/hakkinda \
             http://localhost:4400/dogrulama http://localhost:4400/ayarlar \
             http://localhost:4400/bildir http://localhost:4400/mesajlar \
-            http://localhost:4400/profil
+            http://localhost:4400/profil http://localhost:4400/demo

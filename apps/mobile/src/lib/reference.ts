@@ -1,7 +1,7 @@
-import { DISCIPLINE_LABEL_TR } from '@only-horses/shared-types';
+import { DEMO_BREEDS, DEMO_DISCIPLINES } from '@only-horses/demo-content';
+import type { ReferenceItem } from '@only-horses/demo-content';
 
 import { api } from '@/lib/api';
-import { DISCIPLINES as DEMO_DISCIPLINES } from '@/lib/catalog';
 
 /**
  * §7's reference data, loaded once from the API.
@@ -17,33 +17,27 @@ import { DISCIPLINES as DEMO_DISCIPLINES } from '@/lib/catalog';
  * with an empty breed list because a fetch was in flight is the failure worth
  * avoiding.
  */
-export interface ReferenceItem {
-  code: string;
-  name: string;
-  groupCode?: string;
-  origin?: string | null;
-}
+
 
 let breeds: ReferenceItem[] | null = null;
 let disciplines: ReferenceItem[] | null = null;
 
 /**
- * Falls back to the labels compiled into the app.
+ * The bundled copies, used whenever the server does not answer.
  *
- * §7's discipline list is stable and the app already ships Turkish names for
- * it, so an unreachable API means an older list rather than an empty picker —
- * a wizard step with no options is a wizard nobody can finish.
+ * §9's tables change with a migration, not with a session, so shipping them is
+ * cheap and the alternative is expensive: an unreachable API means a breed
+ * picker with nothing in it, and a wizard step with no options is a wizard
+ * nobody can finish.
  */
-const FALLBACK_DISCIPLINES: ReferenceItem[] = DEMO_DISCIPLINES.map((code) => ({
-  code,
-  name: DISCIPLINE_LABEL_TR[code] ?? code,
-}));
-
 export async function loadBreeds(): Promise<ReferenceItem[]> {
   if (breeds) return breeds;
 
   const result = await api<ReferenceItem[]>('/reference/breeds', { auth: false });
-  breeds = result.ok && Array.isArray(result.data) ? result.data : [];
+  breeds =
+    result.ok && Array.isArray(result.data) && result.data.length > 0
+      ? result.data
+      : [...DEMO_BREEDS];
   return breeds;
 }
 
@@ -54,7 +48,7 @@ export async function loadDisciplines(): Promise<ReferenceItem[]> {
   disciplines =
     result.ok && Array.isArray(result.data) && result.data.length > 0
       ? result.data
-      : FALLBACK_DISCIPLINES;
+      : [...DEMO_DISCIPLINES];
   return disciplines;
 }
 
@@ -62,12 +56,18 @@ export async function loadDisciplines(): Promise<ReferenceItem[]> {
 export function disciplineName(code: string): string {
   return (
     disciplines?.find((entry) => entry.code === code)?.name ??
-    DISCIPLINE_LABEL_TR[code] ??
+    DEMO_DISCIPLINES.find((entry) => entry.code === code)?.name ??
     code
   );
 }
 
 export function breedName(code: string | null | undefined): string {
   if (!code) return '';
-  return breeds?.find((entry) => entry.code === code)?.name ?? code;
+  return (
+    breeds?.find((entry) => entry.code === code)?.name ??
+    DEMO_BREEDS.find((entry) => entry.code === code)?.name ??
+    code
+  );
 }
+
+export type { ReferenceItem };

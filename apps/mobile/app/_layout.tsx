@@ -9,6 +9,7 @@ import { useFonts } from 'expo-font';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { DemoBar } from '@/components/DemoBar';
 import { SessionProvider } from '@/lib/session';
 import { fonts, theme } from '@/theme/tokens';
 
@@ -43,13 +44,21 @@ export default function RootLayout() {
       */}
       {fontsLoaded ? (
         <SessionProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: theme.color.bg },
-              animation: 'fade',
-            }}
-          />
+          {/*
+            The demo strip sits outside the navigator so it survives every
+            push. Inside, each screen would have to remember it, and the one
+            that forgot would be the one someone was looking at.
+          */}
+          <View style={{ flex: 1, backgroundColor: theme.color.bg }}>
+            <DemoBar />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: theme.color.bg },
+                animation: 'fade',
+              }}
+            />
+          </View>
         </SessionProvider>
       ) : (
         <View style={{ flex: 1, backgroundColor: theme.color.bg }} />

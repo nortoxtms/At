@@ -32,6 +32,13 @@ M6's DoD is "§24 fully green", and it is not: **21 of 29 criteria are verified,
 
 Other known gaps, stated plainly:
 
+- **The app has a demo mode that needs no server at all.** "Demo olarak gir"
+  on the sign-in screen answers every request from a local store instead of the
+  network: you can register a horse, add photos and health records, publish a
+  listing and find it in search, message a seller and get a reply, save
+  searches, apply to a job. It persists, so what you make is still there next
+  launch. `scripts/mobile-demo-e2e.mjs` walks 15 steps with the API *aborted at
+  the network layer* — any request that tries to leave fails the run.
 - **The mobile app exists and is verified against the API, but has never run
   on a device.** There is no simulator here and no phone. What is verified is
   Expo's web target — the same React tree, components and tokens, rendered by

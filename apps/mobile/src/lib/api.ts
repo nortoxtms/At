@@ -88,14 +88,53 @@ async function refresh(): Promise<boolean> {
   return true;
 }
 
+/**
+ * Demo mode: every request is answered locally instead of over the network.
+ *
+ * The switch is here, at the single point every screen already goes through,
+ * rather than in the screens. Thirty components each deciding whether they are
+ * in demo mode is thirty places to forget — and the ones that got forgotten
+ * would be the ones that quietly showed nothing.
+ */
+let demoHandler:
+  | ((path: string, method: string, body: unknown) => Promise<{ status: number; body: unknown }>)
+  | null = null;
+
+export function setDemoHandler(handler: typeof demoHandler) {
+  demoHandler = handler;
+}
+
+export function isDemo(): boolean {
+  return demoHandler !== null;
+}
+
 export async function api<T>(
   path: string,
   init: RequestInit & { auth?: boolean } = {},
 ): Promise<ApiResult<T>> {
   const { auth = true, ...options } = init;
 
-  // Never race the keychain (see `restored` above).
-  if (auth) await restored;
+  // Every request waits, not just the authenticated ones. The barrier decides
+  // two things — whether there is a session, and whether this app is talking
+  // to a server at all — and a public read that skips it fires before demo
+  // mode is switched on, reaches the network, and fails. That is exactly what
+  // happened: eighteen requests left a demo that is supposed to be offline.
+  await restored;
+
+  if (demoHandler) {
+    const parsed = typeof options.body === 'string' ? safeParse(options.body) : undefined;
+    const answer = await demoHandler(path, options.method ?? 'GET', parsed);
+    const envelope = answer.body as { data?: T; error?: ApiError } | null;
+
+    if (answer.status >= 400 || envelope?.error) {
+      return {
+        ok: false,
+        error: envelope?.error ?? { code: 'INTERNAL_ERROR', message: 'Bir şeyler ters gitti.' },
+      };
+    }
+
+    return { ok: true, data: envelope?.data as T };
+  }
 
   const send = () =>
     fetch(`${API_URL}/v1${path}`, {
@@ -144,6 +183,14 @@ export async function api<T>(
   }
 
   return { ok: true, data: body?.data as T };
+}
+
+function safeParse(body: string): unknown {
+  try {
+    return JSON.parse(body);
+  } catch {
+    return undefined;
+  }
 }
 
 /** Search endpoints answer with `meta`, which the caller usually needs. */

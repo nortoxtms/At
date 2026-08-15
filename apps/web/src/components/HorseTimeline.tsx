@@ -66,14 +66,14 @@ export function HorseTimeline({ entries }: { entries: TimelineEntry[] }) {
                 className="timeline-node"
                 data-origin={entry.kind === 'registered'}
               >
-                <p className="text-label uppercase text-text-muted mb-1">
+                <p className="text-label uppercase text-text-secondary mb-1">
                   {KIND_LABEL_TR[entry.kind]}
                 </p>
                 <p className="text-body text-text-primary">{entry.title}</p>
                 {entry.detail ? (
                   <p className="text-small text-text-secondary mt-0.5">{entry.detail}</p>
                 ) : null}
-                <p className="text-caption text-text-muted mt-1 tabular">
+                <p className="text-caption text-text-secondary mt-1 tabular">
                   {formatDate(entry.date)}
                 </p>
               </li>
@@ -86,4 +86,4 @@ export function HorseTimeline({ entries }: { entries: TimelineEntry[] }) {
 }
 
 /** Exported so the mobile timeline can assert it renders the same ordering. */
-export const TIMELINE_ACCENT = tokens.colors.brass;
+export const TIMELINE_ACCENT = tokens.colors.gold;

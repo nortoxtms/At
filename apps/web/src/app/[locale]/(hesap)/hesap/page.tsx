@@ -97,23 +97,23 @@ export default async function AccountPage() {
         <form action={signOut}>
           <button
             type="submit"
-            className="rounded-md border border-border px-4 py-2 text-small hover:bg-sand/40"
+            className="rounded-md border border-border px-4 py-2 text-small hover:bg-surface-raised/60"
           >
             Çıkış yap
           </button>
         </form>
       </header>
 
-      <section className="mt-8 rounded-lg border border-border bg-paper p-5">
+      <section className="mt-8 rounded-lg border border-border bg-surface p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-label text-text-muted uppercase">Doğrulama</p>
+            <p className="text-label text-text-secondary uppercase">Doğrulama</p>
             <p className="font-display text-h3 mt-1">
               {VERIFICATION_LABEL[me.verificationLevel] ?? me.verificationLevel}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-label text-text-muted uppercase">Güven puanı</p>
+            <p className="text-label text-text-secondary uppercase">Güven puanı</p>
             <p className="font-display text-h3 tabular mt-1">{me.trustScore}</p>
           </div>
         </div>
@@ -136,8 +136,8 @@ export default async function AccountPage() {
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {counters.map(([label, value, href]) => {
             const card = (
-              <div className="h-full rounded-lg border border-border bg-paper p-4">
-                <p className="text-label text-text-muted uppercase">{label}</p>
+              <div className="h-full rounded-lg border border-border bg-surface p-4">
+                <p className="text-label text-text-secondary uppercase">{label}</p>
                 <p className="font-display text-h2 tabular mt-1">{value}</p>
               </div>
             );
@@ -145,7 +145,7 @@ export default async function AccountPage() {
             return (
               <li key={label}>
                 {href ? (
-                  <Link href={href} className="block h-full hover:border-brass">
+                  <Link href={href} className="block h-full hover:border-gold-muted">
                     {card}
                   </Link>
                 ) : (
@@ -159,7 +159,7 @@ export default async function AccountPage() {
 
       <section className="mt-8">
         <h2 className="font-display text-h2 mb-4">Hesap</h2>
-        <ul className="divide-y divide-border rounded-lg border border-border bg-paper">
+        <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
           {[
             ['Atlarım', '/tr/hesap/atlarim'],
             ['İlanlarım', '/tr/hesap/ilanlarim'],
@@ -169,10 +169,10 @@ export default async function AccountPage() {
             <li key={href}>
               <Link
                 href={href}
-                className="flex items-center justify-between px-5 py-4 text-body hover:bg-sand/40"
+                className="flex items-center justify-between px-5 py-4 text-body hover:bg-surface-raised/60"
               >
                 {label}
-                <span aria-hidden="true" className="text-text-muted">
+                <span aria-hidden="true" className="text-text-secondary">
                   →
                 </span>
               </Link>

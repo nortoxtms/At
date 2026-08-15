@@ -69,7 +69,7 @@ export default async function ListingsIndexPage({ searchParams }: PageProps) {
 
       {hits.length === 0 ? (
         // §20.7: empty states invite action rather than apologising.
-        <div className="rounded-lg border border-border bg-paper p-10 text-center">
+        <div className="rounded-lg border border-border bg-surface p-10 text-center">
           <p className="font-display text-h3">Bu filtrelerle ilan bulunamadı</p>
           <p className="text-small text-text-secondary mt-2">
             Filtreleri genişlet veya aramanı kaydet — eşleşen bir ilan yayınlandığında haber verelim.
@@ -89,7 +89,7 @@ export default async function ListingsIndexPage({ searchParams }: PageProps) {
         <nav className="mt-10 flex justify-center">
           <a
             href={`?${new URLSearchParams({ ...(params as Record<string, string>), page: String(page + 1) })}`}
-            className="rounded-md border border-border px-6 py-3 text-small hover:bg-sand/40"
+            className="rounded-md border border-border px-6 py-3 text-small hover:bg-surface-raised/60"
           >
             Sonraki sayfa
           </a>

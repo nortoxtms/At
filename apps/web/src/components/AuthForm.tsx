@@ -7,7 +7,7 @@ import { useFormStatus } from 'react-dom';
 import type { AuthState } from '@/lib/auth-state';
 
 const FIELD =
-  'w-full rounded-md border border-border bg-paper px-3 py-2 text-body text-text-primary';
+  'w-full rounded-md border border-border bg-surface px-3 py-2 text-body text-text-primary';
 
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -16,7 +16,7 @@ function Submit({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md bg-ink px-6 py-3 text-body font-medium text-text-inverse disabled:opacity-60"
+      className="w-full rounded-md bg-gold-soft px-6 py-3 text-body font-medium text-text-on-gold disabled:opacity-60"
     >
       {pending ? 'Gönderiliyor…' : label}
     </button>
@@ -58,7 +58,7 @@ export function AuthForm({
 
       {signUp ? (
         <label className="block">
-          <span className="text-label text-text-muted uppercase">Adın</span>
+          <span className="text-label text-text-secondary uppercase">Adın</span>
           <input
             name="displayName"
             required
@@ -67,7 +67,7 @@ export function AuthForm({
             aria-invalid={Boolean(fieldError('displayName'))}
           />
           {fieldError('displayName') ? (
-            <span className="text-caption text-text-danger mt-1 block">
+            <span className="text-caption text-danger mt-1 block">
               {fieldError('displayName')}
             </span>
           ) : null}
@@ -75,7 +75,7 @@ export function AuthForm({
       ) : null}
 
       <label className="block">
-        <span className="text-label text-text-muted uppercase">E-posta</span>
+        <span className="text-label text-text-secondary uppercase">E-posta</span>
         <input
           name="email"
           type="email"
@@ -85,12 +85,12 @@ export function AuthForm({
           aria-invalid={Boolean(fieldError('email'))}
         />
         {fieldError('email') ? (
-          <span className="text-caption text-text-danger mt-1 block">{fieldError('email')}</span>
+          <span className="text-caption text-danger mt-1 block">{fieldError('email')}</span>
         ) : null}
       </label>
 
       <label className="block">
-        <span className="text-label text-text-muted uppercase">Şifre</span>
+        <span className="text-label text-text-secondary uppercase">Şifre</span>
         <input
           name="password"
           type="password"
@@ -101,11 +101,11 @@ export function AuthForm({
           aria-invalid={Boolean(fieldError('password'))}
         />
         {fieldError('password') ? (
-          <span className="text-caption text-text-danger mt-1 block">
+          <span className="text-caption text-danger mt-1 block">
             {fieldError('password')}
           </span>
         ) : (
-          <span className="text-caption text-text-muted mt-1 block">
+          <span className="text-caption text-text-secondary mt-1 block">
             {signUp ? 'En az 8 karakter.' : ''}
           </span>
         )}
@@ -117,14 +117,14 @@ export function AuthForm({
         {signUp ? (
           <>
             Zaten hesabın var mı?{' '}
-            <Link href="/tr/giris" className="text-brass-text underline">
+            <Link href="/tr/giris" className="text-gold-soft underline">
               Giriş yap
             </Link>
           </>
         ) : (
           <>
             Hesabın yok mu?{' '}
-            <Link href="/tr/kayit" className="text-brass-text underline">
+            <Link href="/tr/kayit" className="text-gold-soft underline">
               Hesap oluştur
             </Link>
           </>
@@ -133,7 +133,7 @@ export function AuthForm({
 
       {signUp ? (
         // §24.26: the policy pages must be linked from signup.
-        <p className="text-caption text-text-muted text-center">
+        <p className="text-caption text-text-secondary text-center">
           Hesap oluşturarak{' '}
           <Link href="/tr/kosullar" className="underline">
             Kullanım Koşulları

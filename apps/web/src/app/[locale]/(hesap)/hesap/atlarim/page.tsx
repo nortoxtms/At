@@ -41,14 +41,14 @@ export default async function MyHorsesPage() {
     <main className="mx-auto max-w-3xl px-6 py-10">
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="font-display text-h1">Atlarım</h1>
-        <Link href="/tr/hesap" className="text-small text-text-secondary hover:text-brass-text">
+        <Link href="/tr/hesap" className="text-small text-text-secondary hover:text-gold-soft">
           ← Hesabım
         </Link>
       </header>
 
       {horses.length === 0 ? (
         // §20.7: an empty state names the next action.
-        <div className="rounded-lg border border-border bg-paper p-10 text-center">
+        <div className="rounded-lg border border-border bg-surface p-10 text-center">
           <p className="font-display text-h3">Henüz at kaydın yok</p>
           <p className="text-small text-text-secondary mt-2">
             Bir atın kaydı kalıcıdır ve ilan ondan türer — önce atı kaydet, satmaya karar
@@ -58,10 +58,10 @@ export default async function MyHorsesPage() {
       ) : (
         <ul className="space-y-3">
           {horses.map((horse) => (
-            <li key={horse.id} className="rounded-lg border border-border bg-paper p-5">
+            <li key={horse.id} className="rounded-lg border border-border bg-surface p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="font-display text-h3">{horse.name}</h2>
-                <span className="text-caption text-text-muted">
+                <span className="text-caption text-text-secondary">
                   {horse.activeListingId ? 'İlanda' : 'İlanda değil'}
                 </span>
               </div>
@@ -77,7 +77,7 @@ export default async function MyHorsesPage() {
                   .join(' · ')}
               </p>
 
-              <p className="text-caption text-text-muted mt-3 tabular">
+              <p className="text-caption text-text-secondary mt-3 tabular">
                 {horse.mediaCount} medya
                 {horse.nextDueOn
                   ? ` · sıradaki: ${horse.nextDueTitle ?? 'bakım'} (${horse.nextDueOn})`

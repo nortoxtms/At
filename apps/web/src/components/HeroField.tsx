@@ -8,7 +8,7 @@ import { useEffect, useRef } from 'react';
  * §20.6 allows real photographs and nothing else, and there are none yet — so
  * the hero has been a flat ink rectangle. This is the alternative that does
  * not break the rule: no illustration, no stock horse, nothing depicting
- * anything. A slow field of brass motes at three depths, which reads as air
+ * anything. A slow field of gold motes at three depths, which reads as air
  * and distance rather than as a picture of something.
  *
  * Written against the canvas API directly rather than a 3D library. §24.18
@@ -80,7 +80,7 @@ export function HeroField() {
         context.arc(mote.x + sway, y, radius, 0, Math.PI * 2);
         // Brass, thinned by depth. The nearest motes are still barely visible:
         // this is meant to be noticed only once you stop reading.
-        context.fillStyle = `rgba(217, 173, 92, ${0.05 + mote.z * 0.17})`;
+        context.fillStyle = `rgba(215, 179, 126, ${0.05 + mote.z * 0.16})`;
         context.fill();
       }
     };

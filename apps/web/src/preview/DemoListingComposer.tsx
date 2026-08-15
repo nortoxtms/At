@@ -35,7 +35,7 @@ const DISCIPLINES = [
 ];
 
 const FIELD =
-  'w-full rounded-md border border-border bg-paper px-3 py-2 text-small text-text-primary';
+  'w-full rounded-md border border-border bg-surface px-3 py-2 text-small text-text-primary';
 
 export function DemoListingComposer() {
   const [title, setTitle] = useState('Zümrüt — 9 yaşında Arap kısrak');
@@ -148,20 +148,20 @@ export function DemoListingComposer() {
             };
 
   const toneClass = {
-    success: 'border-success/50 bg-success/10 text-text-success',
-    warning: 'border-warning/50 bg-warning/10 text-text-warning',
-    danger: 'border-danger/50 bg-danger/10 text-text-danger',
+    success: 'border-success/50 bg-success/10 text-success',
+    warning: 'border-warning/50 bg-warning/10 text-warning',
+    danger: 'border-danger/50 bg-danger/10 text-danger',
   }[outcome.tone];
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
       <form className="space-y-5" onSubmit={(event) => event.preventDefault()}>
-        <fieldset className="space-y-4 rounded-lg border border-border bg-paper p-5">
+        <fieldset className="space-y-4 rounded-lg border border-border bg-surface p-5">
           <legend className="font-display text-h3 px-1">At</legend>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="text-label text-text-muted uppercase">Cinsiyet</span>
+              <span className="text-label text-text-secondary uppercase">Cinsiyet</span>
               <select
                 className={`${FIELD} mt-1`}
                 value={sex}
@@ -176,7 +176,7 @@ export function DemoListingComposer() {
             </label>
 
             <label className="block">
-              <span className="text-label text-text-muted uppercase">Doğum tarihi</span>
+              <span className="text-label text-text-secondary uppercase">Doğum tarihi</span>
               <input
                 type="date"
                 className={`${FIELD} mt-1`}
@@ -186,7 +186,7 @@ export function DemoListingComposer() {
             </label>
 
             <label className="block">
-              <span className="text-label text-text-muted uppercase">Irk</span>
+              <span className="text-label text-text-secondary uppercase">Irk</span>
               <input
                 className={`${FIELD} mt-1`}
                 value={breedId}
@@ -195,7 +195,7 @@ export function DemoListingComposer() {
             </label>
 
             <label className="block">
-              <span className="text-label text-text-muted uppercase">Boy (cm)</span>
+              <span className="text-label text-text-secondary uppercase">Boy (cm)</span>
               <input
                 className={`${FIELD} mt-1 tabular`}
                 inputMode="numeric"
@@ -205,7 +205,7 @@ export function DemoListingComposer() {
             </label>
 
             <label className="block">
-              <span className="text-label text-text-muted uppercase">Renk</span>
+              <span className="text-label text-text-secondary uppercase">Renk</span>
               <input
                 className={`${FIELD} mt-1`}
                 value={color}
@@ -215,7 +215,7 @@ export function DemoListingComposer() {
           </div>
 
           <div>
-            <span className="text-label text-text-muted uppercase">Disiplinler</span>
+            <span className="text-label text-text-secondary uppercase">Disiplinler</span>
             <div className="mt-2 flex flex-wrap gap-2">
               {DISCIPLINES.map((discipline) => {
                 const on = disciplines.includes(discipline);
@@ -231,7 +231,7 @@ export function DemoListingComposer() {
                       )
                     }
                     className={`rounded-full border px-3 py-1 text-caption ${
-                      on ? 'border-brass bg-brass/15' : 'border-border'
+                      on ? 'border-gold-muted bg-gold/15' : 'border-border'
                     }`}
                   >
                     {discipline}
@@ -242,11 +242,11 @@ export function DemoListingComposer() {
           </div>
         </fieldset>
 
-        <fieldset className="space-y-4 rounded-lg border border-border bg-paper p-5">
+        <fieldset className="space-y-4 rounded-lg border border-border bg-surface p-5">
           <legend className="font-display text-h3 px-1">İlan</legend>
 
           <label className="block">
-            <span className="text-label text-text-muted uppercase">Başlık</span>
+            <span className="text-label text-text-secondary uppercase">Başlık</span>
             <input
               className={`${FIELD} mt-1`}
               value={title}
@@ -255,7 +255,7 @@ export function DemoListingComposer() {
           </label>
 
           <label className="block">
-            <span className="text-label text-text-muted uppercase">
+            <span className="text-label text-text-secondary uppercase">
               Açıklama ({description.length} karakter)
             </span>
             <textarea
@@ -267,7 +267,7 @@ export function DemoListingComposer() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="text-label text-text-muted uppercase">Fiyat (€)</span>
+              <span className="text-label text-text-secondary uppercase">Fiyat (€)</span>
               <input
                 className={`${FIELD} mt-1 tabular`}
                 inputMode="numeric"
@@ -278,7 +278,7 @@ export function DemoListingComposer() {
             </label>
 
             <label className="block">
-              <span className="text-label text-text-muted uppercase">Fiyat tipi</span>
+              <span className="text-label text-text-secondary uppercase">Fiyat tipi</span>
               <select
                 className={`${FIELD} mt-1`}
                 value={priceType}
@@ -293,7 +293,7 @@ export function DemoListingComposer() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="text-label text-text-muted uppercase">
+              <span className="text-label text-text-secondary uppercase">
                 Fotoğraf: {photoCount}
               </span>
               <input
@@ -302,19 +302,19 @@ export function DemoListingComposer() {
                 max={12}
                 value={photoCount}
                 onChange={(event) => setPhotoCount(Number(event.target.value))}
-                className="mt-2 w-full accent-brass"
+                className="mt-2 w-full accent-gold-soft"
               />
             </label>
 
             <label className="block">
-              <span className="text-label text-text-muted uppercase">Video: {videoCount}</span>
+              <span className="text-label text-text-secondary uppercase">Video: {videoCount}</span>
               <input
                 type="range"
                 min={0}
                 max={3}
                 value={videoCount}
                 onChange={(event) => setVideoCount(Number(event.target.value))}
-                className="mt-2 w-full accent-brass"
+                className="mt-2 w-full accent-gold-soft"
               />
             </label>
           </div>
@@ -330,7 +330,7 @@ export function DemoListingComposer() {
                   type="checkbox"
                   checked={value}
                   onChange={(event) => set(event.target.checked)}
-                  className="accent-brass"
+                  className="accent-gold-soft"
                 />
                 {label}
               </label>
@@ -346,13 +346,13 @@ export function DemoListingComposer() {
         </div>
 
         {violations.length > 0 ? (
-          <div className="rounded-lg border border-danger/50 bg-paper p-4">
-            <p className="text-label text-text-muted uppercase">§14.4 refah politikası</p>
+          <div className="rounded-lg border border-danger/50 bg-surface p-4">
+            <p className="text-label text-text-secondary uppercase">§14.4 refah politikası</p>
             <ul className="mt-3 space-y-3 text-small">
               {violations.map((violation) => (
                 <li key={violation.rule}>
                   <p className="text-text-primary">{violation.messageTr}</p>
-                  <p className="text-text-muted mt-1 text-caption">
+                  <p className="text-text-secondary mt-1 text-caption">
                     {violation.rule} ·{' '}
                     {violation.requiresReview ? 'insan incelemesi' : 'kategorik ret'}
                   </p>
@@ -363,30 +363,30 @@ export function DemoListingComposer() {
         ) : null}
 
         {/* §18.2 S13's quality meter, computed by §13.2's own function. */}
-        <div className="rounded-lg border border-border bg-paper p-4">
+        <div className="rounded-lg border border-border bg-surface p-4">
           <div className="flex items-baseline justify-between">
-            <p className="text-label text-text-muted uppercase">Kalite puanı</p>
+            <p className="text-label text-text-secondary uppercase">Kalite puanı</p>
             <p className="font-display text-h2 tabular">{quality.score}</p>
           </div>
 
           <div
-            className="mt-2 h-2 w-full overflow-hidden rounded-full bg-sand"
+            className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-raised"
             role="progressbar"
             aria-valuenow={quality.score}
             aria-valuemin={0}
             aria-valuemax={100}
           >
-            <div className="h-full bg-brass" style={{ width: `${quality.score}%` }} />
+            <div className="h-full bg-gold-soft" style={{ width: `${quality.score}%` }} />
           </div>
 
           {quality.suggestions.length > 0 ? (
             <>
-              <p className="text-text-muted mt-4 text-caption uppercase">Puanı yükseltmek için</p>
+              <p className="text-text-secondary mt-4 text-caption uppercase">Puanı yükseltmek için</p>
               <ul className="mt-2 space-y-2 text-small">
                 {quality.suggestions.slice(0, 5).map((component) => (
                   <li key={component.key} className="flex justify-between gap-3">
                     <span className="text-text-secondary">{component.suggestion}</span>
-                    <span className="tabular text-text-muted">+{component.points}</span>
+                    <span className="tabular text-text-secondary">+{component.points}</span>
                   </li>
                 ))}
               </ul>
@@ -398,7 +398,7 @@ export function DemoListingComposer() {
           )}
         </div>
 
-        <p className="text-caption text-text-muted">
+        <p className="text-caption text-text-secondary">
           Bu ekrandaki her karar §13.2 ve §14.4&apos;ün gerçek kod ile hesaplanıyor. Kaydetme
           canlı sunucu ister; bu sürümde hiçbir şey kaydedilmez.
         </p>

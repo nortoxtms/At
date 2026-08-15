@@ -11,7 +11,7 @@ export function PreviewBanner() {
   if (process.env.NEXT_PUBLIC_STATIC_PREVIEW !== '1') return null;
 
   return (
-    <div className="border-b border-brass/40 bg-sand px-6 py-3 text-center text-small text-text-primary">
+    <div className="border-b border-gold-muted/50 bg-surface-raised px-6 py-3 text-center text-small text-text-primary">
       <strong className="font-display">Demo.</strong>{' '}
       Tasarım, metinler ve yasal sayfalar gerçek; ilanlar örnek veridir ve
       filtreler tarayıcıda çalışır. Mesajlaşma, kayıt ve ödeme canlı sunucu

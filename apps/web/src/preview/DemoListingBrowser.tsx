@@ -45,7 +45,7 @@ export function DemoListingBrowser() {
   }, [query, type, region, maxPrice]);
 
   const field =
-    'w-full rounded-md border border-border bg-paper px-3 py-2 text-small text-text-primary';
+    'w-full rounded-md border border-border bg-surface px-3 py-2 text-small text-text-primary';
 
   return (
     <>
@@ -55,7 +55,7 @@ export function DemoListingBrowser() {
         role="search"
       >
         <label className="block">
-          <span className="text-label text-text-muted uppercase">Ara</span>
+          <span className="text-label text-text-secondary uppercase">Ara</span>
           <input
             className={`${field} mt-1`}
             placeholder="İsim, ırk, şehir"
@@ -65,7 +65,7 @@ export function DemoListingBrowser() {
         </label>
 
         <label className="block">
-          <span className="text-label text-text-muted uppercase">İlan türü</span>
+          <span className="text-label text-text-secondary uppercase">İlan türü</span>
           <select
             className={`${field} mt-1`}
             value={type}
@@ -81,7 +81,7 @@ export function DemoListingBrowser() {
         </label>
 
         <label className="block">
-          <span className="text-label text-text-muted uppercase">Bölge</span>
+          <span className="text-label text-text-secondary uppercase">Bölge</span>
           <select
             className={`${field} mt-1`}
             value={region}
@@ -97,7 +97,7 @@ export function DemoListingBrowser() {
         </label>
 
         <label className="block">
-          <span className="text-label text-text-muted uppercase">En fazla (€)</span>
+          <span className="text-label text-text-secondary uppercase">En fazla (€)</span>
           <input
             className={`${field} mt-1 tabular`}
             inputMode="numeric"
@@ -112,7 +112,7 @@ export function DemoListingBrowser() {
 
       {results.length === 0 ? (
         // §20.7: empty states invite action rather than apologising.
-        <div className="rounded-lg border border-border bg-paper p-10 text-center">
+        <div className="rounded-lg border border-border bg-surface p-10 text-center">
           <p className="font-display text-h3">Bu filtrelerle ilan bulunamadı</p>
           <p className="text-small text-text-secondary mt-2">
             Filtreleri genişlet — bu önizlemede on iki ilan var.

@@ -43,7 +43,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       <header className="mb-6">
         <Link
           href="/tr/hesap/mesajlar"
-          className="text-small text-text-secondary hover:text-brass-text"
+          className="text-small text-text-secondary hover:text-gold-soft"
         >
           ← Mesajlarım
         </Link>
@@ -57,7 +57,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
             return (
               <li
                 key={message.id}
-                className="rounded-lg border border-border bg-sand/40 px-4 py-3 text-caption text-text-secondary"
+                className="rounded-lg border border-border bg-surface-raised/60 px-4 py-3 text-caption text-text-secondary"
               >
                 {message.body}
               </li>
@@ -69,18 +69,18 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
               key={message.id}
               className={`max-w-[85%] rounded-lg border px-4 py-3 ${
                 mine
-                  ? 'ml-auto border-brass/40 bg-brass/10'
-                  : 'border-border bg-paper'
+                  ? 'ml-auto border-gold-muted/50 bg-gold/10'
+                  : 'border-border bg-surface'
               }`}
             >
-              <p className="text-caption text-text-muted">
+              <p className="text-caption text-text-secondary">
                 {mine ? 'Sen' : (message.sender_name ?? 'Silinmiş kullanıcı')}
               </p>
               <p className="text-body mt-1 whitespace-pre-line">{message.body}</p>
 
               {/* §14.3: the warning belongs next to the message that triggered it. */}
               {message.payment_warning ? (
-                <p className="text-caption text-text-warning mt-2">
+                <p className="text-caption text-warning mt-2">
                   Bu mesaj platform dışı ödeme isteği içeriyor olabilir. Atı görmeden ödeme
                   yapma.
                 </p>
@@ -97,11 +97,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
           required
           maxLength={4000}
           placeholder="Mesaj yaz…"
-          className="flex-1 rounded-md border border-border bg-paper px-3 py-2 text-body text-text-primary"
+          className="flex-1 rounded-md border border-border bg-surface px-3 py-2 text-body text-text-primary"
         />
         <button
           type="submit"
-          className="rounded-md bg-ink px-5 py-2 text-small text-text-inverse"
+          className="rounded-md bg-gold-soft px-5 py-2 text-small text-text-on-gold"
         >
           Gönder
         </button>

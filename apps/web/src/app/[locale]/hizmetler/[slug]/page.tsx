@@ -61,7 +61,7 @@ export default async function ServicePage({ params }: PageProps) {
 
         <div className="mt-4 flex flex-wrap gap-2">
           {service.is_mobile ? (
-            <span className="rounded-full bg-sand px-3 py-1 text-caption">Mobil hizmet</span>
+            <span className="rounded-full bg-surface-raised px-3 py-1 text-caption">Mobil hizmet</span>
           ) : null}
           {service.service_radius_km ? (
             <span className="rounded-full border border-border px-3 py-1 text-caption tabular">
@@ -98,7 +98,7 @@ export default async function ServicePage({ params }: PageProps) {
       {/* §26: transport services carry a regulatory notice. It arrives from
           the API, so it is present here without this page knowing the rule. */}
       {service.notice ? (
-        <aside className="mt-8 rounded-lg border border-brass/40 bg-sand/40 p-5 text-small">
+        <aside className="mt-8 rounded-lg border border-gold-muted/50 bg-surface-raised/60 p-5 text-small">
           <p>{service.notice.tr}</p>
         </aside>
       ) : null}

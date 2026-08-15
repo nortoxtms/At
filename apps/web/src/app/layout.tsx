@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Fraunces, Inter } from 'next/font/google';
+import { Cormorant_Garamond, Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import './globals.css';
@@ -24,9 +24,9 @@ import { SiteHeader } from '@/components/SiteHeader';
  * is a transfer a privacy policy has to disclose. Now there is nothing to
  * disclose.
  */
-const fraunces = Fraunces({
+const display = Cormorant_Garamond({
   subsets: ['latin', 'latin-ext'],
-  weight: ['500', '600'],
+  weight: ['500', '600', '700'],
   variable: '--font-display',
   display: 'swap',
 });
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="tr" className={`${fraunces.variable} ${inter.variable}`}>
+    <html lang="tr" className={`${display.variable} ${inter.variable}`}>
       <body className="font-sans antialiased flex min-h-screen flex-col">
         {/* Renders only in the GitHub Pages export (scripts/build-preview.sh). */}
         <PreviewBanner />

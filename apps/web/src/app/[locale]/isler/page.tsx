@@ -56,7 +56,7 @@ export default async function JobsIndexPage({ params, searchParams }: PageProps)
       </header>
 
       {hits.length === 0 ? (
-        <div className="rounded-lg border border-border bg-paper p-10 text-center">
+        <div className="rounded-lg border border-border bg-surface p-10 text-center">
           <p className="font-display text-h3">Bu filtrelerle ilan bulunamadı</p>
           <p className="text-small text-text-secondary mt-2">
             Filtreleri genişlet ya da yakındaki şehirlere de bak.
@@ -68,7 +68,7 @@ export default async function JobsIndexPage({ params, searchParams }: PageProps)
             <li key={job.id}>
               <Link
                 href={`/${locale}/isler/${job.slug}`}
-                className="block rounded-lg border border-border bg-paper p-5 transition hover:border-brass"
+                className="block rounded-lg border border-border bg-surface p-5 transition hover:border-gold-muted"
               >
                 <div className="flex items-baseline justify-between gap-4">
                   <h2 className="font-display text-h3">{job.title}</h2>

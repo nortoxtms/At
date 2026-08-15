@@ -11,142 +11,76 @@
  * them in sync by editing the token file, not this one.
  */
 /*
- * Roles are declared as raw RGB channels so Tailwind can apply an opacity
- * modifier to them — `bg-sand/40` compiles to `rgb(var(--sand-rgb) / 0.4)`,
- * which a hex value cannot express. The hex aliases below exist for the
- * hand-written CSS further down this file.
+ * Design tokens — spec v2.1 §20.1, copied literally.
+ *
+ * The app is dark-first: a near-black warm charcoal ground with one sand-gold
+ * accent, so that photographs of horses are the brightest thing on screen.
+ * That only holds if nothing else competes, which is why there is exactly one
+ * accent hue and the status colours are semantic rather than decorative.
+ *
+ * Declared as raw RGB channels because Tailwind needs them that way to apply
+ * an opacity modifier — `bg-surface/60` compiles to `rgb(var(--surface-rgb) /
+ * 0.6)`, which a hex value cannot express. The hex aliases below exist for the
+ * hand-written rules further down this file.
+ *
+ * The preset resolves every colour utility to these variables. It used to map
+ * them to literal hex values, which is how the previous palette shipped cream
+ * text on a sand ground at 1.27:1 — the utilities never read the theme at all.
  */
 :root {
-  /*
-   * Brand pigments. Fixed in both themes — they name a colour, not a role.
-   */
-  --ink: #17130f;
-  --leather: #4a2f1d;
-  --leather-deep: #33200f;
-  --brass-light: #d9ad5c;
-  --cream: #f7f2e8;
+  /* Surfaces */
+  --bg-rgb:             14 12 10;    /* #0E0C0A app background */
+  --surface-rgb:        23 20 15;    /* #17140F cards, sheets, inputs */
+  --surface-raised-rgb: 34 29 23;    /* #221D17 elevated cards, chips, tab bar */
+  --surface-input-rgb:  28 24 20;    /* #1C1814 */
 
-  --success: #4a6b45;
-  --warning: #c2761e;
-  --danger: #9b2c1f;
-  --info: #3c5a6b;
+  /* Accent — sand gold, the only accent */
+  --gold-rgb:           201 162 39;  /* #C9A227 saturated: small marks, focus */
+  --gold-soft-rgb:      215 179 126; /* #D7B37E primary buttons, active tab, links */
+  --gold-muted-rgb:     143 118 69;  /* #8F7645 disabled gold, hairlines */
 
-  /*
-   * Roles. Only these are redefined by the dark theme.
-   *
-   * The split is the fix for a bug that shipped: `sand` was a pigment that
-   * pages also used as a background, and the dark theme turned body text
-   * cream while every `bg-sand` block stayed light — cream on sand, a
-   * contrast ratio of 1.27:1. Not low contrast, invisible.
-   */
-  --surface-rgb: 247 242 232;
-  --paper-rgb: 255 255 255;
-  --sand-rgb: 228 215 194;
+  /* Text on dark */
+  --text-primary-rgb:   244 239 230; /* #F4EFE6 */
+  --text-secondary-rgb: 185 174 158; /* #B9AE9E */
+  --text-muted-rgb:     126 116 102; /* #7E7466 */
+  --text-on-gold-rgb:   23 20 15;    /* #17140F */
 
-  --text-primary-rgb: 23 19 15;
-  --text-secondary-rgb: 92 81 71;
-  /*
-   * Was #8a7d70 — 2.82:1 on sand, 4.00:1 on white, below WCAG AA's 4.5:1
-   * everywhere it was used. This clears it on the lightest surface it sits on.
-   */
-  --text-muted-rgb: 104 92 80;
-  /*
-   * Paired with `bg-ink` and `bg-leather`, which are pigments and stay dark in
-   * both themes — so this stays cream in both themes. It used to flip to ink
-   * in the dark theme, which rendered the hero heading and the header's call
-   * to action as ink on ink: a contrast ratio of exactly 1:1, invisible.
-   */
-  --text-inverse-rgb: 247 242 232;
+  /* Lines */
+  --border-rgb:         244 239 230; /* used at 10% */
+  --border-alpha:       0.10;
+  --border-strong-alpha: 0.18;
 
-  --brass-rgb: 180 131 47;
-  /*
-   * Brass at #b4832f is 3.37:1 on white: enough for a rule or a fill, not for
-   * words. Text that wants to be brass uses this, and the brand colour stays
-   * what it is.
-   */
-  --brass-text-rgb: 125 90 28;
+  /* Semantic */
+  --success-rgb:        110 154 95;  /* #6E9A5F */
+  --warning-rgb:        217 164 65;  /* #D9A441 */
+  --danger-rgb:         194 80 63;   /* #C2503F */
+  --info-rgb:           109 143 163; /* #6D8FA3 */
 
-  /*
-   * The status pigments as *text*. §20.1's values are chosen to be read as
-   * fills and rules; used for words they miss AA on a light surface (warning
-   * at #c2761e is 3.19:1 on cream) and vanish on a dark one (leather at
-   * #4a2f1d is 1.38:1 on dark paper). These are the same hues, adjusted per
-   * theme so the badge still reads.
-   */
-  --success-text-rgb: 58 84 53;
-  --warning-text-rgb: 141 84 14;
-  --danger-text-rgb: 155 44 31;
-  --info-text-rgb: 46 71 86;
-  --leather-text-rgb: 74 47 29;
+  /* Light surfaces — web long-form only (§20.1) */
+  --paper-rgb:          247 242 232; /* #F7F2E8 */
+  --paper-text-rgb:     23 20 15;    /* #17140F */
 
-  --border-rgb: 220 208 188;
-  --border-strong-rgb: 185 168 142;
-}
-
-/* §20.1: ink ground, cream text, brass-light accent, borders at 12% white. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --surface-rgb: 23 19 15;
-    --paper-rgb: 34 28 23;
-    /* The warm secondary surface, dark. Cream text on it is 13.3:1. */
-    --sand-rgb: 46 38 32;
-
-    --text-primary-rgb: 247 242 232;
-    --text-secondary-rgb: 196 184 168;
-    --text-muted-rgb: 162 150 138;
-
-    --brass-rgb: 217 173 92;
-    --brass-text-rgb: 217 173 92;
-
-    --success-text-rgb: 141 178 134;
-    --warning-text-rgb: 226 165 92;
-    --danger-text-rgb: 226 138 126;
-    --info-text-rgb: 138 178 199;
-    --leather-text-rgb: 209 176 150;
-
-    --border-rgb: 61 52 44;
-    --border-strong-rgb: 84 72 61;
-  }
-}
-
-:root[data-theme='dark'] {
-  --surface-rgb: 23 19 15;
-  --paper-rgb: 34 28 23;
-  --sand-rgb: 46 38 32;
-
-  --text-primary-rgb: 247 242 232;
-  --text-secondary-rgb: 196 184 168;
-  --text-muted-rgb: 162 150 138;
-
-  --brass-rgb: 217 173 92;
-  --brass-text-rgb: 217 173 92;
-
-  --success-text-rgb: 141 178 134;
-  --warning-text-rgb: 226 165 92;
-  --danger-text-rgb: 226 138 126;
-  --info-text-rgb: 138 178 199;
-  --leather-text-rgb: 209 176 150;
-
-  --border-rgb: 61 52 44;
-  --border-strong-rgb: 84 72 61;
-}
-
-/* Hex aliases for the hand-written rules below, which take no opacity. */
-:root {
+  /* Hex aliases for the hand-written rules below, which take no opacity. */
+  --bg: rgb(var(--bg-rgb));
   --surface: rgb(var(--surface-rgb));
-  --paper: rgb(var(--paper-rgb));
-  --sand: rgb(var(--sand-rgb));
-  --brass: rgb(var(--brass-rgb));
+  --surface-raised: rgb(var(--surface-raised-rgb));
+  --gold: rgb(var(--gold-rgb));
+  --gold-soft: rgb(var(--gold-soft-rgb));
+  --gold-muted: rgb(var(--gold-muted-rgb));
   --text-primary: rgb(var(--text-primary-rgb));
   --text-secondary: rgb(var(--text-secondary-rgb));
   --text-muted: rgb(var(--text-muted-rgb));
-  --text-inverse: rgb(var(--text-inverse-rgb));
-  --border: rgb(var(--border-rgb));
-  --border-strong: rgb(var(--border-strong-rgb));
+  --border: rgba(var(--border-rgb) / var(--border-alpha));
+  --border-strong: rgba(var(--border-rgb) / var(--border-strong-alpha));
+
+  /* §20.1: photography always sits under this before text is placed on it. */
+  --overlay-scrim: linear-gradient(180deg, rgba(14,12,10,0) 0%, rgba(14,12,10,.92) 100%);
+
+  color-scheme: dark;
 }
 
 body {
-  background: var(--surface);
+  background: var(--bg);
   color: var(--text-primary);
 }
 
@@ -173,7 +107,7 @@ body {
   inset-block: 0.5rem;
   inset-inline-start: 0.3125rem;
   width: 1px;
-  background: var(--brass);
+  background: var(--gold-muted);
   opacity: 0.55;
 }
 
@@ -188,11 +122,11 @@ body {
   top: 0.5rem;
   width: 0.5rem;
   height: 0.5rem;
-  background: var(--brass);
+  background: var(--gold-muted);
   transform: rotate(45deg);
 }
 
 /* Registration is where the record begins; give it a filled marker. */
 .timeline-node[data-origin='true']::before {
-  box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--brass);
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--gold);
 }

@@ -61,7 +61,7 @@ export default async function PricingPage() {
       </header>
 
       <section className="mt-10 grid gap-6 md:grid-cols-3">
-        <article className="rounded-lg border border-border bg-paper p-6">
+        <article className="rounded-lg border border-border bg-surface p-6">
           <h2 className="font-display text-h2">Ücretsiz</h2>
           <p className="mt-2 text-display tabular">0 €</p>
           <p className="text-small text-text-secondary mt-1">Her zaman</p>
@@ -73,8 +73,8 @@ export default async function PricingPage() {
           return (
             <article
               key={plan.product}
-              className={`rounded-lg border bg-paper p-6 ${
-                plan.tier === 'pro' ? 'border-brass' : 'border-border'
+              className={`rounded-lg border bg-surface p-6 ${
+                plan.tier === 'pro' ? 'border-gold-muted' : 'border-border'
               }`}
             >
               <h2 className="font-display text-h2">{TIER_LABEL[plan.tier]}</h2>
@@ -115,7 +115,7 @@ export default async function PricingPage() {
         </table>
       </section>
 
-      <section className="mt-12 rounded-lg border border-border bg-sand/40 p-6 text-small">
+      <section className="mt-12 rounded-lg border border-border bg-surface-raised/60 p-6 text-small">
         <h2 className="font-display text-h3">Tek seferlik ürünler</h2>
         <ul className="mt-3 space-y-2">
           <li className="tabular">

@@ -44,7 +44,7 @@ export async function SiteHeader() {
    * ink hero without needing a second, opaque variant of it.
    */
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-paper/85 backdrop-blur-md supports-[backdrop-filter]:bg-paper/70">
+    <header className="sticky top-0 z-50 border-b border-border bg-surface/85 backdrop-blur-md supports-[backdrop-filter]:bg-surface/70">
       <nav
         aria-label="Ana menü"
         className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4"
@@ -61,7 +61,7 @@ export async function SiteHeader() {
             <li key={section.href}>
               <Link
                 href={section.href}
-                className="text-text-secondary transition-colors hover:text-brass-text"
+                className="text-text-secondary transition-colors hover:text-gold-soft"
               >
                 {section.label}
               </Link>
@@ -73,18 +73,18 @@ export async function SiteHeader() {
           {signedIn ? (
             <Link
               href="/tr/hesap"
-              className="rounded-full bg-ink px-5 py-2 text-text-inverse transition-transform hover:-translate-y-0.5"
+              className="rounded-full bg-gold-soft px-5 py-2 text-text-on-gold transition-transform hover:-translate-y-0.5"
             >
               Hesabım
             </Link>
           ) : (
             <>
-              <Link href="/tr/giris" className="text-text-secondary hover:text-brass-text">
+              <Link href="/tr/giris" className="text-text-secondary hover:text-gold-soft">
                 Giriş
               </Link>
               <Link
                 href="/tr/kayit"
-                className="rounded-full bg-ink px-5 py-2 text-text-inverse transition-transform hover:-translate-y-0.5"
+                className="rounded-full bg-gold-soft px-5 py-2 text-text-on-gold transition-transform hover:-translate-y-0.5"
               >
                 Hesap oluştur
               </Link>

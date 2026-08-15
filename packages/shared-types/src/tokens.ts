@@ -1,79 +1,57 @@
 /**
- * Design tokens — spec §20.
+ * Design tokens — spec v2.1 §20.1.
  *
- * One file, consumed by the Tailwind preset (web) and the NativeWind preset
- * (mobile). §20 is emphatic that the accent is burnished brass, not
- * terracotta: "that is where the premium, not cheap classifieds read comes
- * from". Keeping the palette in code rather than duplicated per platform is
- * what stops that drifting.
+ * One file, consumed by the Tailwind preset (web) and by mobile. The app is
+ * dark-first: a near-black warm charcoal ground with a single sand-gold
+ * accent, so that photographs of horses are the brightest thing on screen.
+ * That only holds if nothing else competes — hence exactly one accent hue,
+ * with the status colours semantic rather than decorative.
+ *
+ * There is no light theme on mobile in v1. `paper` and `paperText` exist for
+ * web long-form pages only (ADR-0009).
  */
 
 export const colors = {
-  // Core
-  ink: '#17130F', // near-black brown — hero/nav surface
-  leather: '#4A2F1D', // saddle leather — primary brand
-  leatherDeep: '#33200F',
-  brass: '#B4832F', // accent: buckles, bits, stirrup hardware
-  brassLight: '#D9AD5C',
-  sand: '#E4D7C2', // arena footing
-  cream: '#F7F2E8', // page background
-  paper: '#FFFFFF',
+  // Surfaces
+  bg: '#0E0C0A', // app background
+  surface: '#17140F', // cards, sheets, inputs
+  surfaceRaised: '#221D17', // elevated cards, chips, tab bar
+  surfaceInput: '#1C1814',
 
-  // Semantic
-  success: '#4A6B45', // pasture green
-  warning: '#C2761E',
-  danger: '#9B2C1F',
-  info: '#3C5A6B',
+  // Accent — sand gold, the only accent
+  gold: '#C9A227', // saturated: small marks and focus
+  goldSoft: '#D7B37E', // primary buttons, active tab, links
+  goldMuted: '#8F7645', // disabled gold, hairlines
 
-  // Text
-  textPrimary: '#17130F',
-  textSecondary: '#5C5147',
-  textMuted: '#8A7D70',
-  textInverse: '#F7F2E8',
+  // Text on dark
+  textPrimary: '#F4EFE6',
+  textSecondary: '#B9AE9E',
+  textMuted: '#7E7466',
+  textOnGold: '#17140F',
 
   // Lines
-  border: '#DCD0BC',
-  borderStrong: '#B9A88E',
+  border: 'rgba(244,239,230,.10)',
+  borderStrong: 'rgba(244,239,230,.18)',
+
+  // Semantic
+  success: '#6E9A5F',
+  warning: '#D9A441',
+  danger: '#C2503F',
+  info: '#6D8FA3',
+
+  // Light surfaces — web long-form only
+  paper: '#F7F2E8',
+  paperText: '#17140F',
 } as const;
 
-/** §20.1: dark mode is ink ground, cream text, brass-light accent, 12% white borders. */
-export const darkColors = {
-  ...colors,
-  background: colors.ink,
-  paper: '#221C17',
-  textPrimary: colors.cream,
-  textSecondary: '#C4B8A8',
-  textMuted: '#8A7D70',
-  textInverse: colors.ink,
-  brass: colors.brassLight,
-  border: 'rgba(255,255,255,0.12)',
-  borderStrong: 'rgba(255,255,255,0.20)',
-} as const;
+/**
+ * §20.1: photography always sits under this before text is placed on it.
+ * Because the theme is dark, an image whose lower third is bright must be
+ * rejected rather than dimmed further.
+ */
+export const overlayScrim =
+  'linear-gradient(180deg, rgba(14,12,10,0) 0%, rgba(14,12,10,.92) 100%)';
 
-/** §20.2 — Fraunces is reserved for H1/H2, prices and horse names. */
-export const fonts = {
-  display: 'Fraunces',
-  body: 'Inter',
-} as const;
-
-/** §20.2 mobile scale: [fontSize, lineHeight] in px. */
-export const typeScale = {
-  display: [32, 38],
-  h1: [26, 32],
-  h2: [21, 28],
-  h3: [18, 24],
-  body: [16, 24],
-  small: [14, 20],
-  caption: [12, 16],
-  label: [11, 14],
-} as const;
-
-export const letterSpacing = {
-  display: '-0.02em', // §20.2 tight tracking on Fraunces
-  label: '0.08em', // §20.2 uppercase labels
-} as const;
-
-/** §20.3 — 4-pt base. */
 export const spacing = {
   1: 4,
   2: 8,

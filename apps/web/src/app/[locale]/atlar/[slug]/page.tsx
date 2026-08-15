@@ -108,7 +108,7 @@ export default async function ListingPage({ params }: PageProps) {
       </nav>
 
       <header>
-        <p className="text-label uppercase text-text-muted">
+        <p className="text-label uppercase text-text-secondary">
           {LISTING_TYPE_LABEL_TR[listing.type] ?? listing.type}
         </p>
 
@@ -133,8 +133,8 @@ export default async function ListingPage({ params }: PageProps) {
         <SafetyCard />
       </div>
 
-      <section className="mt-8 rounded-lg border border-border bg-paper p-6 shadow-card">
-        <p className="text-label uppercase text-text-muted">Satıcı</p>
+      <section className="mt-8 rounded-lg border border-border bg-surface p-6 ">
+        <p className="text-label uppercase text-text-secondary">Satıcı</p>
         <p className="font-display text-h3 mt-1">{listing.seller_name}</p>
         <p className="text-small text-text-secondary mt-1">
           {/* §13.3: the components, never a bare score. */}
@@ -153,7 +153,7 @@ export default async function ListingPage({ params }: PageProps) {
           the seller's own screens are in the app (§18.2). This linked to a 404;
           naming the handle is what the page can honestly offer.
         */}
-        <p className="text-small text-text-muted mt-3">@{listing.seller_handle}</p>
+        <p className="text-small text-text-secondary mt-3">@{listing.seller_handle}</p>
       </section>
 
       {listing.description ? (
@@ -196,7 +196,7 @@ export default async function ListingPage({ params }: PageProps) {
       ) : null}
 
       <footer className="mt-12 border-t border-border pt-6">
-        <p className="text-caption text-text-muted">
+        <p className="text-caption text-text-secondary">
           ONLY HORSES bir aracı platformdur, bu satışın tarafı değildir. Fiyat ve
           durum bilgisi satıcı beyanıdır.
         </p>
@@ -208,7 +208,7 @@ export default async function ListingPage({ params }: PageProps) {
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-label uppercase text-text-muted">{label}</dt>
+      <dt className="text-label uppercase text-text-secondary">{label}</dt>
       <dd className="text-body text-text-primary tabular">{value}</dd>
     </div>
   );

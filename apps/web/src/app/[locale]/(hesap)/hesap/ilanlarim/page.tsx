@@ -67,20 +67,20 @@ export default async function MyListingsPage() {
     <main className="mx-auto max-w-3xl px-6 py-10">
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="font-display text-h1">İlanlarım</h1>
-        <Link href="/tr/hesap" className="text-small text-text-secondary hover:text-brass-text">
+        <Link href="/tr/hesap" className="text-small text-text-secondary hover:text-gold-soft">
           ← Hesabım
         </Link>
       </header>
 
       {listings.length === 0 ? (
-        <div className="rounded-lg border border-border bg-paper p-10 text-center">
+        <div className="rounded-lg border border-border bg-surface p-10 text-center">
           <p className="font-display text-h3">Henüz ilanın yok</p>
           <p className="text-small text-text-secondary mt-2">
             İlan bir attan türer. Önce atı kaydet, sonra satılığa çıkar.
           </p>
           <Link
             href="/tr/hesap/atlarim"
-            className="mt-4 inline-block rounded-md border border-border px-5 py-2 text-small hover:bg-sand/40"
+            className="mt-4 inline-block rounded-md border border-border px-5 py-2 text-small hover:bg-surface-raised/60"
           >
             Atlarıma bak
           </Link>
@@ -88,10 +88,10 @@ export default async function MyListingsPage() {
       ) : (
         <ul className="space-y-3">
           {listings.map((listing) => (
-            <li key={listing.id} className="rounded-lg border border-border bg-paper p-5">
+            <li key={listing.id} className="rounded-lg border border-border bg-surface p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="font-display text-h3">{listing.title}</h2>
-                <span className="rounded-full bg-sand px-3 py-1 text-caption">
+                <span className="rounded-full bg-surface-raised px-3 py-1 text-caption">
                   {STATUS_LABEL[listing.status] ?? listing.status}
                 </span>
               </div>
@@ -107,7 +107,7 @@ export default async function MyListingsPage() {
                   : ' · Fiyat sorunuz'}
               </p>
 
-              <p className="text-caption text-text-muted mt-3 tabular">
+              <p className="text-caption text-text-secondary mt-3 tabular">
                 {listing.view_count} görüntülenme · {listing.save_count} kayıt ·{' '}
                 {listing.inquiry_count} mesaj
                 {listing.quality_score !== null ? ` · kalite ${listing.quality_score}` : ''}
@@ -118,7 +118,7 @@ export default async function MyListingsPage() {
                 {listing.status === 'active' ? (
                   <Link
                     href={`/tr/atlar/${listing.slug}`}
-                    className="rounded-md border border-border px-4 py-2 text-small hover:bg-sand/40"
+                    className="rounded-md border border-border px-4 py-2 text-small hover:bg-surface-raised/60"
                   >
                     İlanı gör
                   </Link>
@@ -130,7 +130,7 @@ export default async function MyListingsPage() {
                     <input type="hidden" name="action" value={action} />
                     <button
                       type="submit"
-                      className="rounded-md border border-border px-4 py-2 text-small hover:bg-sand/40"
+                      className="rounded-md border border-border px-4 py-2 text-small hover:bg-surface-raised/60"
                     >
                       {label}
                     </button>

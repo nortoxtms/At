@@ -30,7 +30,7 @@ export default function PreviewComposePage() {
           refah politikası kontrolleri ve &ldquo;doğrudan yayınlanır mı, incelemeye mi
           düşer&rdquo; eşiği, API&apos;nin kullandığı kodun aynısıdır.
         </p>
-        <p className="text-small text-text-muted mt-2 max-w-2xl">
+        <p className="text-small text-text-secondary mt-2 max-w-2xl">
           Denemek için: başlığa &ldquo;kesimlik&rdquo; yaz, ya da kimlik doğrulamasını kapat.
         </p>
       </header>

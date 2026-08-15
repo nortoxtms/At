@@ -31,13 +31,13 @@ export default function PreviewJobsPage() {
       </header>
 
       {DEMO_JOBS.length === 0 ? (
-        <div className="rounded-lg border border-border bg-paper p-10 text-center">
+        <div className="rounded-lg border border-border bg-surface p-10 text-center">
           <p className="font-display text-h3">Şu an açık ilan yok</p>
         </div>
       ) : (
         <ul className="space-y-4">
           {DEMO_JOBS.map((job) => (
-            <li key={job.id} className="rounded-lg border border-border bg-paper p-5">
+            <li key={job.id} className="rounded-lg border border-border bg-surface p-5">
               <h2 className="font-display text-h3">{job.title}</h2>
               <p className="text-small text-text-secondary mt-1">
                 {job.organizationName ?? job.posterName}

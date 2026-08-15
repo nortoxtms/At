@@ -63,7 +63,7 @@ export default function HomePage() {
         brass motes, a warm radial wash, and a hairline grid that stops before
         it becomes a pattern.
       */}
-      <section className="relative isolate overflow-hidden bg-ink text-text-inverse">
+      <section className="relative isolate overflow-hidden bg-bg text-text-primary">
         <HeroField />
 
         {/* A single warm source, off-centre. Flat ink reads as a placeholder;
@@ -73,15 +73,13 @@ export default function HomePage() {
           className="pointer-events-none absolute inset-0 opacity-70"
           style={{
             background:
-              'radial-gradient(70rem 40rem at 78% -10%, rgba(217,173,92,0.20), transparent 60%),' +
-              'radial-gradient(50rem 30rem at 8% 110%, rgba(74,47,29,0.55), transparent 65%)',
+              'radial-gradient(70rem 40rem at 78% -10%, rgba(215,179,126,0.18), transparent 60%),' +
+              'radial-gradient(50rem 30rem at 8% 110%, rgba(201,162,39,0.10), transparent 65%)',
           }}
         />
 
         <div className="relative mx-auto max-w-6xl px-6 py-24 md:py-36">
-          <p className="text-label uppercase tracking-[0.2em] text-brass-light">
-            Türkiye · Beta
-          </p>
+          <p className="text-label uppercase tracking-[0.2em] text-gold">Türkiye · Beta</p>
 
           {/*
             The type does the work here. §20.2 reserves Fraunces for display,
@@ -92,10 +90,10 @@ export default function HomePage() {
           <h1 className="font-display mt-6 max-w-4xl text-[clamp(2.5rem,7vw,5.25rem)] font-semibold leading-[0.98] tracking-[-0.02em]">
             Atların dünyası
             <br />
-            <span className="text-brass-light">tek bir yerde.</span>
+            <span className="text-gold-soft">tek bir yerde.</span>
           </h1>
 
-          <p className="mt-8 max-w-xl text-lg leading-relaxed text-cream/75">
+          <p className="mt-8 max-w-xl text-lg leading-relaxed text-text-secondary">
             Atının sağlık, nal, aşı ve sahiplik geçmişini tek dosyada tut.
             Satmak istediğinde ilanın çoktan hazır olsun.
           </p>
@@ -109,7 +107,7 @@ export default function HomePage() {
             */}
             <Link
               href="/tr/atlar"
-              className="group inline-flex items-center gap-2 rounded-full bg-brass px-7 py-3.5 text-body font-medium text-ink transition-transform duration-200 hover:-translate-y-0.5"
+              className="group inline-flex items-center gap-2 rounded-full bg-gold-soft px-7 py-3.5 text-body font-medium text-text-on-gold transition-transform duration-200 hover:-translate-y-0.5"
             >
               Satılık atlara bak
               <span
@@ -121,7 +119,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/tr/hizmetler"
-              className="rounded-full border border-cream/25 px-7 py-3.5 text-body font-medium text-cream transition-colors duration-200 hover:border-cream/50 hover:bg-cream/5"
+              className="rounded-full border border-border-strong px-7 py-3.5 text-body font-medium text-text-primary transition-colors duration-200 hover:border-gold-muted hover:bg-text-primary/5"
             >
               Hizmet ara
             </Link>
@@ -129,16 +127,16 @@ export default function HomePage() {
 
           {/* §22's counters, once there are any. Until then this states the
               two facts that are true on day one and cost nothing to keep. */}
-          <dl className="mt-16 grid max-w-2xl grid-cols-2 gap-x-10 gap-y-6 border-t border-cream/15 pt-8 sm:grid-cols-3">
+          <dl className="mt-16 grid max-w-2xl grid-cols-2 gap-x-10 gap-y-6 border-t border-border pt-8 sm:grid-cols-3">
             {[
               ['Komisyon', '%0', 'Satıştan pay alınmaz'],
               ['Kimlik', 'Zorunlu', 'İlan vermenin koşulu'],
               ['Kayıt', 'Kalıcı', 'At satılsa da kalır'],
             ].map(([label, value, note]) => (
               <div key={label}>
-                <dt className="text-label uppercase tracking-wider text-cream/50">{label}</dt>
-                <dd className="font-display mt-1 text-h2 text-cream">{value}</dd>
-                <dd className="mt-1 text-caption text-cream/55">{note}</dd>
+                <dt className="text-label uppercase tracking-wider text-text-secondary">{label}</dt>
+                <dd className="font-display mt-1 text-h2 text-text-primary">{value}</dd>
+                <dd className="mt-1 text-caption text-text-secondary">{note}</dd>
               </div>
             ))}
           </dl>
@@ -153,18 +151,18 @@ export default function HomePage() {
         thing.
       */}
       <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
-        <p className="text-label uppercase tracking-[0.2em] text-brass-text">İki nesne</p>
+        <p className="text-label uppercase tracking-[0.2em] text-gold-soft">İki nesne</p>
         <h2 className="font-display mt-4 max-w-2xl text-[clamp(1.75rem,3.5vw,2.75rem)] leading-tight tracking-[-0.01em]">
           Kayıt kalıcıdır. İlan geçicidir.
         </h2>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-5">
-          <article className="group relative overflow-hidden rounded-xl border border-border bg-paper p-8 transition-colors duration-300 hover:border-brass/40 lg:col-span-3">
+          <article className="group relative overflow-hidden rounded-xl border border-border bg-surface p-8 transition-colors duration-300 hover:border-gold-muted/50 lg:col-span-3">
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brass/5 transition-transform duration-500 group-hover:scale-125"
+              className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-gold/5 transition-transform duration-500 group-hover:scale-125"
             />
-            <p className="text-label uppercase tracking-wider text-text-muted">Kalıcı</p>
+            <p className="text-label uppercase tracking-wider text-text-secondary">Kalıcı</p>
             <h3 className="font-display text-h1 mt-2">At kaydı</h3>
             <p className="text-body text-text-secondary mt-4 max-w-md leading-relaxed">
               Mikroçip, pasaport, ırk, doğum tarihi, sağlık ve nal kayıtları,
@@ -183,8 +181,8 @@ export default function HomePage() {
             </ul>
           </article>
 
-          <article className="rounded-xl border border-border bg-sand/40 p-8 lg:col-span-2">
-            <p className="text-label uppercase tracking-wider text-text-muted">Geçici</p>
+          <article className="rounded-xl border border-border bg-surface-raised/60 p-8 lg:col-span-2">
+            <p className="text-label uppercase tracking-wider text-text-secondary">Geçici</p>
             <h3 className="font-display text-h1 mt-2">İlan</h3>
             <p className="text-body text-text-secondary mt-4 leading-relaxed">
               Satılık, kiralık, hisse veya aygır hizmeti. Fiyat, görünürlük ve
@@ -195,10 +193,10 @@ export default function HomePage() {
       </section>
 
       {/* §20.4 signature element. Everything around it stays quiet. */}
-      <section className="border-y border-border bg-sand/25">
+      <section className="border-y border-border bg-surface-raised/40">
         <div className="mx-auto grid max-w-6xl gap-12 px-6 py-20 md:py-28 lg:grid-cols-2 lg:items-center">
           <div>
-            <p className="text-label uppercase tracking-[0.2em] text-brass-text">Zaman çizelgesi</p>
+            <p className="text-label uppercase tracking-[0.2em] text-gold-soft">Zaman çizelgesi</p>
             <h2 className="font-display mt-4 text-[clamp(1.75rem,3.5vw,2.75rem)] leading-tight tracking-[-0.01em]">
               Bu atın geçmişi
             </h2>
@@ -210,7 +208,7 @@ export default function HomePage() {
 
             <Link
               href="/tr/atlar"
-              className="group mt-8 inline-flex items-center gap-2 text-body text-brass-text"
+              className="group mt-8 inline-flex items-center gap-2 text-body text-gold-soft"
             >
               Örnek kayıtlara bak
               <span
@@ -222,7 +220,7 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="rounded-xl border border-border bg-paper p-6 shadow-card md:p-8">
+          <div className="rounded-xl border border-border bg-surface p-6 md:p-8">
             <HorseTimeline entries={SAMPLE_TIMELINE} />
           </div>
         </div>
@@ -235,7 +233,7 @@ export default function HomePage() {
         all, so three of the four 404'd.
       */}
       <section className="mx-auto max-w-5xl px-6 py-12">
-        <p className="text-caption text-text-muted">
+        <p className="text-caption text-text-secondary">
           ONLY HORSES bir aracı platformdur, hiçbir satışın tarafı değildir.
         </p>
       </section>

@@ -41,7 +41,7 @@ export default async function PreviewServicesPage({
       <ul className="grid gap-4 sm:grid-cols-2">
         {DEMO_SERVICES.map((service) => (
           <li key={service.id}>
-            <div className="block h-full rounded-lg border border-border bg-paper p-5">
+            <div className="block h-full rounded-lg border border-border bg-surface p-5">
               <h2 className="font-display text-h3">{service.title}</h2>
               <p className="text-small text-text-secondary mt-1">
                 {service.providerName}
@@ -50,10 +50,10 @@ export default async function PreviewServicesPage({
 
               <div className="mt-3 flex flex-wrap gap-2">
                 {service.isMobile ? (
-                  <span className="rounded-full bg-sand px-3 py-1 text-caption">Mobil hizmet</span>
+                  <span className="rounded-full bg-surface-raised px-3 py-1 text-caption">Mobil hizmet</span>
                 ) : null}
                 {service.ratingAverage !== null ? (
-                  <span className="rounded-full bg-sand px-3 py-1 text-caption tabular">
+                  <span className="rounded-full bg-surface-raised px-3 py-1 text-caption tabular">
                     ★ {service.ratingAverage} ({service.ratingCount})
                   </span>
                 ) : null}
@@ -65,7 +65,7 @@ export default async function PreviewServicesPage({
 
       <p className="text-small text-text-secondary mt-8">
         Hizmet detayları ve iletişim canlı API gerektirir.{' '}
-        <Link href={`/${locale}/fiyatlandirma`} className="hover:text-brass-text underline">
+        <Link href={`/${locale}/fiyatlandirma`} className="hover:text-gold-soft underline">
           Planlara bak
         </Link>
       </p>

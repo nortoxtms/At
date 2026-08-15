@@ -145,7 +145,12 @@ for (const scheme of ['light', 'dark']) {
   console.log(`\n\x1b[1m${scheme.toUpperCase()}\x1b[0m`);
 
   for (const url of urls) {
-    await page.goto(url, { waitUntil: 'networkidle' });
+    // `load` plus a fonts wait, not `networkidle`. Contrast depends on the
+    // rendered text, so what has to be true is that the faces have swapped in
+    // — and `networkidle` waits for a quiet network, which a page with a
+    // long-lived connection or an animation frame never reliably reaches.
+    await page.goto(url, { waitUntil: 'load', timeout: 60_000 });
+    await page.evaluate(() => document.fonts.ready);
     const findings = await page.evaluate(AUDIT);
 
     if (findings.length === 0) {

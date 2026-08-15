@@ -28,13 +28,13 @@ export default async function MessagesPage() {
     <main className="mx-auto max-w-3xl px-6 py-10">
       <header className="mb-8 flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="font-display text-h1">Mesajlarım</h1>
-        <Link href="/tr/hesap" className="text-small text-text-secondary hover:text-brass-text">
+        <Link href="/tr/hesap" className="text-small text-text-secondary hover:text-gold-soft">
           ← Hesabım
         </Link>
       </header>
 
       {conversations.length === 0 ? (
-        <div className="rounded-lg border border-border bg-paper p-10 text-center">
+        <div className="rounded-lg border border-border bg-surface p-10 text-center">
           <p className="font-display text-h3">Henüz mesajın yok</p>
           <p className="text-small text-text-secondary mt-2">
             Bir ilana soru sorduğunda ya da biri senin ilanına yazdığında konuşma burada
@@ -42,26 +42,26 @@ export default async function MessagesPage() {
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border bg-paper">
+        <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
           {conversations.map((conversation) => (
             <li key={conversation.id}>
               <Link
                 href={`/tr/hesap/mesajlar/${conversation.id}`}
-                className="block px-5 py-4 hover:bg-sand/40"
+                className="block px-5 py-4 hover:bg-surface-raised/60"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="font-display text-h3">
                     {conversation.counterpartName ?? 'Silinmiş kullanıcı'}
                   </p>
                   {conversation.unread ? (
-                    <span className="rounded-full bg-brass/15 px-3 py-1 text-caption text-text-leather">
+                    <span className="rounded-full bg-gold/15 px-3 py-1 text-caption text-gold-soft">
                       Okunmadı
                     </span>
                   ) : null}
                 </div>
 
                 {conversation.contextTitle ? (
-                  <p className="text-caption text-text-muted mt-1">
+                  <p className="text-caption text-text-secondary mt-1">
                     {conversation.contextTitle}
                   </p>
                 ) : null}
@@ -71,7 +71,7 @@ export default async function MessagesPage() {
                 </p>
 
                 {conversation.blocked ? (
-                  <p className="text-caption text-text-muted mt-2">
+                  <p className="text-caption text-text-secondary mt-2">
                     Bu konuşma engelleme nedeniyle salt okunur.
                   </p>
                 ) : null}

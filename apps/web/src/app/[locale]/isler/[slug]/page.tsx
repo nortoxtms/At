@@ -74,7 +74,7 @@ export default async function JobPage({ params }: PageProps) {
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className="rounded-full bg-sand px-3 py-1 text-caption">
+          <span className="rounded-full bg-surface-raised px-3 py-1 text-caption">
             {JOB_TYPE_LABEL_TR[job.job_type] ?? job.job_type}
           </span>
           <span className="rounded-full border border-border px-3 py-1 text-caption tabular">
@@ -148,14 +148,14 @@ export default async function JobPage({ params }: PageProps) {
 
       {/* §26: employment terms are between the parties, and the notice comes
           from the API so a stale build cannot omit or rewrite it. */}
-      <aside className="mt-8 rounded-lg border border-border bg-sand/40 p-5 text-small">
+      <aside className="mt-8 rounded-lg border border-border bg-surface-raised/60 p-5 text-small">
         <p>{job.notice.tr}</p>
       </aside>
 
       <div className="mt-8 flex items-center gap-4">
         <a
           href={`onlyhorses://jobs/${job.slug}/apply`}
-          className="rounded-md bg-ink px-6 py-3 text-paper transition hover:bg-ink/90"
+          className="rounded-md bg-gold-soft px-6 py-3 text-text-on-gold transition hover:bg-gold-soft/90"
         >
           Başvur
         </a>

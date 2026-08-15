@@ -58,11 +58,11 @@ export default async function LegalPage({ params }: PageProps) {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <nav className="text-small text-text-secondary mb-8 flex items-center justify-between">
-        <Link href={`/${locale}`} className="hover:text-brass-text">
+        <Link href={`/${locale}`} className="hover:text-gold-soft">
           ONLY HORSES
         </Link>
         {/* §24.26 requires both languages, so every page carries the way to the other one. */}
-        <Link href={`/${other}/${document.path}`} className="hover:text-brass-text" hrefLang={other}>
+        <Link href={`/${other}/${document.path}`} className="hover:text-gold-soft" hrefLang={other}>
           {other === 'en' ? 'English' : 'Türkçe'}
         </Link>
       </nav>
@@ -70,7 +70,7 @@ export default async function LegalPage({ params }: PageProps) {
       <header className="border-b border-border pb-6">
         <h1 className="font-display text-h1">{document.title}</h1>
         <p className="text-small text-text-secondary mt-3">{document.summary}</p>
-        <p className="text-caption text-text-muted mt-2 tabular">
+        <p className="text-caption text-text-secondary mt-2 tabular">
           {locale === 'en' ? 'Last updated' : 'Son güncelleme'}: {document.updatedAt}
         </p>
       </header>
@@ -96,7 +96,7 @@ export default async function LegalPage({ params }: PageProps) {
             const link = legalDocument(locale, slug);
             return link ? (
               <li key={slug}>
-                <Link href={`/${locale}/${link.path}`} className="hover:text-brass-text">
+                <Link href={`/${locale}/${link.path}`} className="hover:text-gold-soft">
                   {link.title}
                 </Link>
               </li>

@@ -69,7 +69,7 @@ export function ListingCard({ hit }: { hit: ListingSearchHit }) {
     : 'linear-gradient(135deg, rgb(var(--sand-rgb)), rgb(var(--surface-rgb)))';
 
   return (
-    <article className="group h-full overflow-hidden rounded-xl border border-border bg-paper shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brass/40 hover:shadow-sheet">
+    <article className="group h-full overflow-hidden rounded-xl border border-border bg-surface transition-all duration-300 hover:-translate-y-1 hover:border-gold-muted/50 ">
       {/*
         next/link, not a bare anchor. A hard-coded absolute href skips Next's
         basePath, so every card on the GitHub Pages build pointed one directory
@@ -83,7 +83,7 @@ export function ListingCard({ hit }: { hit: ListingSearchHit }) {
             style={{ background: wash }}
           />
           {hit.isBoosted ? (
-            <span className="absolute left-3 top-3 rounded-full bg-ink/85 px-2.5 py-1 text-caption text-cream">
+            <span className="absolute left-3 top-3 rounded-full bg-bg/85 px-2.5 py-1 text-caption text-text-primary">
               Öne çıkarılan
             </span>
           ) : null}
@@ -96,22 +96,22 @@ export function ListingCard({ hit }: { hit: ListingSearchHit }) {
             that *usually* fine; a solid ground makes it always fine, and the
             contrast audit can see it.
           */}
-          <p className="font-display absolute bottom-3 left-3 rounded-lg bg-ink/85 px-3 py-1.5 text-h3 tabular text-cream">
+          <p className="font-display absolute bottom-3 left-3 rounded-lg bg-bg/85 px-3 py-1.5 text-h3 tabular text-text-primary">
             {price}
           </p>
         </div>
 
         <div className="p-4">
-          <p className="text-label uppercase tracking-wider text-text-muted">
+          <p className="text-label uppercase tracking-wider text-text-secondary">
             {LISTING_TYPE_LABEL_TR[hit.listingType] ?? hit.listingType}
           </p>
 
-          <h2 className="font-display text-h3 mt-1 line-clamp-2 transition-colors group-hover:text-brass-text">
+          <h2 className="font-display text-h3 mt-1 line-clamp-2 transition-colors group-hover:text-gold-soft">
             {hit.title}
           </h2>
           <p className="text-small text-text-secondary mt-1">{facts}</p>
 
-          <p className="text-caption text-text-muted mt-2">
+          <p className="text-caption text-text-secondary mt-2">
             {[hit.city, hit.distanceKm === null ? null : `${hit.distanceKm} km`]
               .filter(Boolean)
               .join(' · ')}
@@ -119,7 +119,7 @@ export function ListingCard({ hit }: { hit: ListingSearchHit }) {
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {hit.sellerVerification !== 'none' && hit.sellerVerification !== 'email_verified' ? (
-              <span className="rounded-full bg-success/10 px-2 py-0.5 text-caption text-text-success">
+              <span className="rounded-full bg-success/10 px-2 py-0.5 text-caption text-success">
                 Doğrulanmış satıcı
               </span>
             ) : null}

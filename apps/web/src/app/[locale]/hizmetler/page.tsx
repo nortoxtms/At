@@ -52,7 +52,7 @@ export default async function ServicesIndexPage({ params, searchParams }: PagePr
       </header>
 
       {hits.length === 0 ? (
-        <div className="rounded-lg border border-border bg-paper p-10 text-center">
+        <div className="rounded-lg border border-border bg-surface p-10 text-center">
           <p className="font-display text-h3">Bu filtrelerle hizmet bulunamadı</p>
           <p className="text-small text-text-secondary mt-2">
             Mobil hizmet verenler de dahil, arama yarıçapını genişletmeyi dene.
@@ -64,7 +64,7 @@ export default async function ServicesIndexPage({ params, searchParams }: PagePr
             <li key={service.id}>
               <Link
                 href={`/${locale}/hizmetler/${service.slug}`}
-                className="block h-full rounded-lg border border-border bg-paper p-5 transition hover:border-brass"
+                className="block h-full rounded-lg border border-border bg-surface p-5 transition hover:border-gold-muted"
               >
                 <h2 className="font-display text-h3">{service.title}</h2>
                 <p className="text-small text-text-secondary mt-1">
@@ -75,7 +75,7 @@ export default async function ServicesIndexPage({ params, searchParams }: PagePr
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {service.isMobile ? (
-                    <span className="rounded-full bg-sand px-3 py-1 text-caption">Mobil hizmet</span>
+                    <span className="rounded-full bg-surface-raised px-3 py-1 text-caption">Mobil hizmet</span>
                   ) : null}
                   {service.ratingAverage !== null ? (
                     <span className="rounded-full border border-border px-3 py-1 text-caption tabular">

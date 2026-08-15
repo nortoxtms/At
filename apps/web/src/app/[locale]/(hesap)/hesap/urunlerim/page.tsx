@@ -21,6 +21,12 @@ import { readSession } from '@/lib/session';
  * A draft can also be deleted. A published one cannot: §5 makes closing the
  * end of a live listing's life, and a row someone has messaged about is not
  * the seller's alone to erase.
+ *
+ * §3.3's identity gate applies to publishing, not to composing — the API
+ * refuses the transition, and this page says so before the button rather than
+ * after the 403. Unlike the horse composer, which blocks at step one: a draft
+ * costs nobody anything, and a seller who has written one has a reason to
+ * finish verification.
  */
 export const metadata: Metadata = { title: 'Ürünlerim', robots: { index: false } };
 
@@ -80,10 +86,23 @@ function price(product: MyProduct): string {
     : amount;
 }
 
+interface Me {
+  verificationLevel: string;
+}
+
 export default async function MyProductsPage() {
   if (!(await readSession())) redirect('/tr/giris');
 
-  const products = (await apiAsOrNull<MyProduct[]>('/me/products')) ?? [];
+  const [products, me] = await Promise.all([
+    apiAsOrNull<MyProduct[]>('/me/products'),
+    apiAsOrNull<Me>('/me'),
+  ]);
+
+  const rows = products ?? [];
+  const verified =
+    me !== null &&
+    me.verificationLevel !== 'none' &&
+    me.verificationLevel !== 'email_verified';
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -101,7 +120,24 @@ export default async function MyProductsPage() {
         Ürün ekle
       </Link>
 
-      {products.length === 0 ? (
+      {/* Only when it can bite: nothing to publish, nothing to warn about. */}
+      {!verified && rows.some((product) => product.status === 'draft') ? (
+        <div className="mb-6 rounded-lg border border-gold-muted bg-surface p-5">
+          <p className="font-display text-h3">Yayınlamak için kimlik doğrulaması gerekiyor</p>
+          <p className="text-small text-text-secondary mt-2">
+            Taslak biriktirebilirsin, ama yayına almak kimliğini doğrulamanı ister — atlarda
+            olduğu gibi. Bu hiçbir planla satın alınamaz.
+          </p>
+          <Link
+            href="/tr/hesap/dogrulama"
+            className="mt-3 inline-block rounded-md border border-border px-4 py-2 text-small hover:bg-surface-raised/60"
+          >
+            Doğrulamaya bak
+          </Link>
+        </div>
+      ) : null}
+
+      {rows.length === 0 ? (
         <div className="rounded-lg border border-border bg-surface p-10 text-center">
           <p className="font-display text-h3">Henüz ürün eklemedin</p>
           <p className="text-small text-text-secondary mt-2">
@@ -111,7 +147,7 @@ export default async function MyProductsPage() {
         </div>
       ) : (
         <ul className="space-y-3">
-          {products.map((product) => (
+          {rows.map((product) => (
             <li key={product.id} className="rounded-lg border border-border bg-surface p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="font-display text-h3">{product.title}</h2>
@@ -141,7 +177,16 @@ export default async function MyProductsPage() {
                   </Link>
                 ) : null}
 
-                {(ACTIONS[product.status] ?? []).map(({ action, label }) => (
+                {(ACTIONS[product.status] ?? []).map(({ action, label }) =>
+                  action === 'publish' && !verified ? (
+                    <Link
+                      key={action}
+                      href="/tr/hesap/dogrulama"
+                      className="rounded-md border border-border px-4 py-2 text-small text-text-secondary hover:bg-surface-raised/60"
+                    >
+                      Yayınla — önce doğrulama
+                    </Link>
+                  ) : (
                   <form key={action} action={productAction}>
                     <input type="hidden" name="id" value={product.id} />
                     <input type="hidden" name="action" value={action} />
@@ -152,7 +197,8 @@ export default async function MyProductsPage() {
                       {label}
                     </button>
                   </form>
-                ))}
+                  ),
+                )}
 
                 {product.status === 'draft' ? (
                   <form action={deleteProduct}>

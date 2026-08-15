@@ -33,6 +33,41 @@ const CANDIDATE =
 const LAUNCH = existsSync(CANDIDATE) ? { executablePath: CANDIDATE } : {};
 
 const base = (process.argv[2] ?? 'http://localhost:4400').replace(/\/$/, '');
+const DB = process.env.DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/only_horses';
+
+/**
+ * Approve identity verification for an account, in the database.
+ *
+ * §17's KYC provider is not wired — it needs credentials this repository must
+ * not carry — so there is no in-app path to `identity_verified` and the
+ * acceptance scripts all grant it this way. Everything downstream of the gate
+ * is exercised for real; only the gate itself is stubbed.
+ */
+async function verifyIdentity(accountEmail) {
+  const { default: pg } = await import('pg');
+  const client = new pg.Client({ connectionString: DB });
+  await client.connect();
+  try {
+    const found = await client.query(
+      `SELECT p.id FROM profiles p JOIN auth.users u ON u.id = p.id WHERE u.email = $1`,
+      [accountEmail],
+    );
+    const profileId = found.rows[0]?.id;
+    if (!profileId) throw new Error(`no profile for ${accountEmail}`);
+
+    await client.query(
+      `INSERT INTO verifications (profile_id, kind, status, provider, decided_at)
+       VALUES ($1, 'identity', 'approved', 'stripe_identity', now())`,
+      [profileId],
+    );
+    await client.query(
+      `UPDATE profiles SET verification_level = 'identity_verified' WHERE id = $1`,
+      [profileId],
+    );
+  } finally {
+    await client.end();
+  }
+}
 const stamp = Date.now();
 const email = `mobile-e2e-${stamp}@onlyhorses.test`;
 const password = 'e2e-password-123';
@@ -383,6 +418,21 @@ if (registered) {
 
     await expectScreen(productTitle);
     await expectScreen('Taslak');
+
+    // §3.3 covers products too, on the same terms as horses: this account is
+    // unverified (step 07), so the rule is stated here and the button routes
+    // to the ladder instead of into a 403 the screen would swallow.
+    await expectScreen('Yayınlamak için kimlik doğrulaması gerekiyor');
+    await tap('Yayınla');
+    await page.waitForTimeout(2000);
+    if (!page.url().includes('/dogrulama')) {
+      throw new Error('publishing unverified did not route to the verification ladder');
+    }
+
+    // Grant the level the way the acceptance scripts do — §17's provider needs
+    // credentials this repository must not carry — then publish for real.
+    await verifyIdentity(email);
+    await go('/urunlerim');
     await tap('Yayınla');
     await page.waitForTimeout(2500);
     await expectScreen('Yayında');

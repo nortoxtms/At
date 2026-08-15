@@ -77,6 +77,11 @@ and the equipment marketplace all exist on both. One thing does not — uploadin
 photos is mobile-only, because the web has no upload widget yet; the horse
 record says so rather than showing a control that does nothing.
 
+§3.3's identity gate covers both marketplaces: publishing a horse listing and
+publishing a product each require `identity_verified`, and neither level is
+purchasable. Pausing and closing are never gated — a seller must always be
+able to take something down.
+
 `scripts/web-account.mjs` walks the signed-in journey in a browser (16 steps)
 and `scripts/web-shot.mjs` renders all 34 routes against a live API; both run
 in CI.

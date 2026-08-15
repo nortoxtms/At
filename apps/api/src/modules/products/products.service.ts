@@ -7,6 +7,7 @@ import type {
 
 import { ApiException } from '../../common/filters/api-exception.filter.js';
 import { DatabaseService } from '../../database/database.service.js';
+import { EntitlementsService } from '../entitlements/entitlements.service.js';
 import { MediaService } from '../media/media.service.js';
 
 /**
@@ -24,6 +25,7 @@ export class ProductsService {
   constructor(
     private readonly db: DatabaseService,
     private readonly media: MediaService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   /**
@@ -367,6 +369,30 @@ export class ProductsService {
       throw ApiException.conflict(
         `Bu ürün "${current}" durumundayken bu işlem yapılamaz.`,
         { from: current, action },
+      );
+    }
+
+    // §3.3's identity gate, on the same terms horse listings get it.
+    //
+    // This table shipped without one, on the reasoning that §3.3 talks about
+    // listings and a bit has no pedigree. That reasoning is wrong about the
+    // thing the gate is actually for: it is not about the animal, it is about
+    // an anonymous account taking money for goods it will not send. A saddle
+    // at 22 000 ₺ is the same fraud as a horse at 240 000 ₺ with a shorter
+    // setup, and the account that cannot publish a horse could publish that.
+    //
+    // Gated on the destination, not on the verb: publish, resume and renew all
+    // put a product in front of buyers and all go through here. Pause and
+    // close do not — a seller whose verification lapses must always be able to
+    // take a listing down, or the gate creates the mess it exists to prevent.
+    if (next === 'active') {
+      // VERIFICATION_REQUIRED rather than a validation error: §3.3's level is
+      // not purchasable, so the client must route to the ladder (§18.2 S26)
+      // and never to the paywall.
+      await this.entitlements.requireVerification(
+        profileId,
+        'identity_verified',
+        'Ürün yayınlamak',
       );
     }
 

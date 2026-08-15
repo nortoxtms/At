@@ -192,13 +192,15 @@ async function seed() {
     },
     token,
   });
-  await api(`/products/${product.id}/publish`, { method: 'POST', token });
-
-  // §3.3 gates publishing a horse listing on identity verification, which
-  // needs a KYC provider this repository has no credentials for. The listing
-  // detail page only serves an active listing, so the level is granted here
-  // the way the acceptance scripts grant it: in the database, once, for a
-  // fixture account. Nothing in the app can do this.
+  // §3.3 gates publishing on identity verification — horse listings and
+  // products alike — and it needs a KYC provider this repository has no
+  // credentials for. The detail pages only serve active rows, so the level is
+  // granted here the way the acceptance scripts grant it: in the database,
+  // once, for a fixture account. Nothing in the app can do this.
+  //
+  // Before either publish, not between them: the product gate was added after
+  // this script was written, and publishing first is how a seed that used to
+  // work started failing on a rule it was not testing.
   const { default: pg } = await import('pg');
   const client = new pg.Client({ connectionString: DB });
   await client.connect();
@@ -217,6 +219,7 @@ async function seed() {
     await client.end();
   }
   await api(`/listings/${listing.id}/publish`, { method: 'POST', token });
+  await api(`/products/${product.id}/publish`, { method: 'POST', token });
 
   await api('/saved', {
     method: 'POST',

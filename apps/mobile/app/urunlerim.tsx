@@ -21,6 +21,12 @@ import { theme } from '@/theme/tokens';
  * horse's do: there is nothing to attach them to until the row exists. And a
  * product with no photograph does not sell, so the grid is on the card itself
  * rather than one tap away — the prompt has to be where the omission is.
+ *
+ * §3.3's identity gate is on publishing, not on composing — unlike the horse
+ * composer, which blocks at step one. That is the API's shape: a draft costs
+ * nobody anything, and a seller who has written one has a reason to finish
+ * verification. So the rule is stated here, next to the button it applies to,
+ * and the button routes to the ladder rather than to a refusal.
  */
 interface MyProduct {
   id: string;
@@ -54,6 +60,10 @@ export default function MyProductsScreen() {
   const router = useRouter();
   const { me } = useSession();
   const [working, setWorking] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const verified =
+    !!me && me.verificationLevel !== 'none' && me.verificationLevel !== 'email_verified';
 
   const { data, loading, reload } = useAsync(async () => {
     const result = await api<MyProduct[]>('/me/products');
@@ -71,9 +81,23 @@ export default function MyProductsScreen() {
   const products = data?.products ?? [];
 
   const transition = async (id: string, action: string) => {
+    // Publishing is the one transition §3.3 gates, and the ladder is where an
+    // unverified seller has to go — not into a request that comes back 403.
+    if (action === 'publish' && !verified) {
+      router.push('/dogrulama');
+      return;
+    }
+
     setWorking(`${id}:${action}`);
-    await api(`/products/${id}/${action}`, { method: 'POST' });
+    setError(null);
+
+    // The result was being thrown away, so a refused transition looked exactly
+    // like a successful one: the spinner stopped, the list reloaded, and the
+    // row was still a draft with no explanation anywhere on screen.
+    const result = await api(`/products/${id}/${action}`, { method: 'POST' });
+
     setWorking(null);
+    if (!result.ok) setError(result.error.message);
     reload();
   };
 
@@ -94,6 +118,16 @@ export default function MyProductsScreen() {
         <View style={{ width: theme.metric.minTouchTarget }} />
       </View>
 
+      {error ? (
+        <View style={{ paddingHorizontal: theme.screenPadding, paddingTop: theme.space.md }}>
+          <Card style={{ borderColor: theme.color.danger }}>
+            <Txt variant="small" display={false}>
+              {error}
+            </Txt>
+          </Card>
+        </View>
+      ) : null}
+
       {loading ? (
         <Loading />
       ) : (
@@ -112,6 +146,25 @@ export default function MyProductsScreen() {
               body="Eyerinden çitine, yeminden kaskına — kullanmadığın ne varsa satabilirsin."
               action={<Button label="Ürün sat" full={false} onPress={() => router.push('/urunler/yeni')} />}
             />
+          }
+          ListHeaderComponent={
+            // Only when it can actually bite: a seller with nothing to publish
+            // does not need to be told about verification.
+            !verified && products.some((product) => product.status === 'draft') ? (
+              <Card style={{ gap: theme.space.sm, borderColor: theme.color.goldMuted }}>
+                <Txt variant="h3">Yayınlamak için kimlik doğrulaması gerekiyor</Txt>
+                <Txt variant="small" color={theme.color.textSecondary} display={false}>
+                  Taslak biriktirebilirsin, ama yayına almak kimliğini doğrulamanı ister —
+                  atlarda olduğu gibi. Bu hiçbir planla satın alınamaz.
+                </Txt>
+                <Button
+                  label="Doğrulamaya bak"
+                  variant="secondary"
+                  full={false}
+                  onPress={() => router.push('/dogrulama')}
+                />
+              </Card>
+            ) : null
           }
           ListFooterComponent={
             products.length > 0 ? (

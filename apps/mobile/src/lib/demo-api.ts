@@ -1,4 +1,4 @@
-import { SEX_LABEL_TR } from '@only-horses/shared-types';
+import { meetsVerification, SEX_LABEL_TR } from '@only-horses/shared-types';
 
 import {
   CATALOGUE,
@@ -843,6 +843,13 @@ export async function demoRequest(
     const next = TRANSITIONS[product.status]?.[at(2) ?? ''];
     if (!next) {
       return fail(409, 'CONFLICT', `Bu ürün "${product.status}" durumundayken bu işlem yapılamaz.`);
+    }
+
+    // §3.3, mirrored from the real service. The demo account is verified, so
+    // this never fires here — which is exactly why it has to exist: a demo
+    // that skips a gate teaches the shape of a product that does not have one.
+    if (next === 'active' && !meetsVerification(state.profile.verificationLevel, 'identity_verified')) {
+      return fail(403, 'VERIFICATION_REQUIRED', 'Ürün yayınlamak için kimliğini doğrulaman gerekiyor.');
     }
 
     product.status = next;

@@ -9,7 +9,7 @@ import {
   DEMO_PRODUCT_CATEGORIES,
   DEMO_SERVICES,
 } from '@only-horses/demo-content';
-import type { ListingSearchHit } from '@only-horses/shared-types';
+import type { ListingSearchHit, VerificationLevel } from '@only-horses/shared-types';
 
 /**
  * The demo's state, and the rules that change it.
@@ -183,7 +183,7 @@ export interface DemoState {
     handle: string;
     displayName: string;
     email: string;
-    verificationLevel: string;
+    verificationLevel: VerificationLevel;
     trustScore: number;
     city: string | null;
     region: string | null;

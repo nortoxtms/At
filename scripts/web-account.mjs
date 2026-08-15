@@ -259,12 +259,43 @@ async function main() {
     if (!text.includes('Taslak')) fail('the new product is not a draft');
     pass('the product was created as a draft');
 
+    // §3.3 applies to products on the same terms as horses. This account is
+    // unverified, so the page must say so *before* the button rather than
+    // after a 403 — a saddle at 22 000 ₺ is the same fraud as a horse at
+    // 240 000 ₺ with a shorter setup.
+    if (!text.includes('Yayınlamak için kimlik doğrulaması gerekiyor')) {
+      fail('the products page does not state §3.3’s publishing rule to an unverified seller');
+    }
+    if ((await page.locator('button:has-text("Yayınla")').count()) > 0) {
+      fail('an unverified seller is offered a publish button that the API will refuse');
+    }
+    pass('§3.3 is stated before the button, and the button routes to the ladder');
+
+    // Grant the level the way the acceptance scripts do — §17's provider needs
+    // credentials this repository must not carry — then publish for real.
+    const verify = new pg.Client({ connectionString: DB });
+    await verify.connect();
+    try {
+      await verify.query(
+        `INSERT INTO verifications (profile_id, kind, status, provider, decided_at)
+         VALUES ($1, 'identity', 'approved', 'stripe_identity', now())`,
+        [browserProfile],
+      );
+      await verify.query(
+        `UPDATE profiles SET verification_level = 'identity_verified' WHERE id = $1`,
+        [browserProfile],
+      );
+    } finally {
+      await verify.end();
+    }
+
+    await page.goto(`${WEB}/tr/hesap/urunlerim`, { waitUntil: 'networkidle' });
     await page.click('button:has-text("Yayınla")');
     await page.waitForTimeout(1500);
     if (!(await page.locator('main').innerText()).includes('Yayında')) {
-      fail('publishing the product did not change its status');
+      fail('publishing the product did not change its status once verified');
     }
-    pass('“Yayınla” moved it to Yayında');
+    pass('once verified, “Yayınla” moved it to Yayında');
 
     console.log(bold('12. §11 — the published product is findable in the marketplace'));
     await page.goto(`${WEB}/tr/urunler?q=${encodeURIComponent(`Wintec eyer ${STAMP}`)}`, {
@@ -317,7 +348,10 @@ async function main() {
     if (!publicText.includes('Hesap Turu')) {
       fail('the public profile does not render for a signed-out visitor');
     }
-    if (!publicText.includes('Doğrulanmamış')) {
+    // Any of §3.3's rungs, not a specific one: by this point in the walk the
+    // account has been verified in order to publish a product, and asserting
+    // "Doğrulanmamış" would be asserting the state two steps ago.
+    if (!/Doğrulanmamış|doğrulandı/.test(publicText)) {
       fail('the public profile does not state the seller’s verification level');
     }
     await anon.close();

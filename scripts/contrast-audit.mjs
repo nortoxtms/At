@@ -21,6 +21,9 @@ import { chromium } from 'playwright';
 const CHROME =
   process.env.CHROME_PATH ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
+/** Milliseconds to wait after load before auditing (see below). */
+const SETTLE_MS = Number(process.env.AUDIT_SETTLE_MS ?? 0);
+
 const urls = process.argv.slice(2);
 if (urls.length === 0) {
   console.error('usage: node scripts/contrast-audit.mjs <url> [url...]');
@@ -151,6 +154,13 @@ for (const scheme of ['light', 'dark']) {
     // long-lived connection or an animation frame never reliably reaches.
     await page.goto(url, { waitUntil: 'load', timeout: 60_000 });
     await page.evaluate(() => document.fonts.ready);
+
+    // A client-rendered app has a first frame that is not the screen: the
+    // mobile build shows a 1.2 s splash and then replaces the route, so
+    // auditing on `load` grades a wordmark on a black ground and passes
+    // everything. SETTLE_MS is how long to let the app become itself.
+    if (SETTLE_MS > 0) await page.waitForTimeout(SETTLE_MS);
+
     const findings = await page.evaluate(AUDIT);
 
     if (findings.length === 0) {

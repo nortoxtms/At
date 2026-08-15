@@ -23,8 +23,16 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/ready'] });
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: false as never });
 
+  // §12: the site's own origin, plus any extra front end named in the
+  // environment (see CORS_EXTRA_ORIGINS). Nothing is allowed implicitly.
   app.enableCors({
-    origin: [config.get('APP_URL', { infer: true })],
+    origin: [
+      config.get('APP_URL', { infer: true }) as string,
+      ...String(config.get('CORS_EXTRA_ORIGINS', { infer: true }) ?? '')
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+    ],
     credentials: true,
     exposedHeaders: ['X-Request-Id', 'Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
   });

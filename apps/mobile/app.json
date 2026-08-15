@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "ONLY HORSES",
+    "slug": "only-horses",
+    "scheme": "onlyhorses",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0E0C0A",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.onlyhorses.app"
+    },
+    "android": {
+      "package": "com.onlyhorses.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0E0C0A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-router", "expo-font", "expo-secure-store"],
+    "extra": {
+      "apiUrl": "http://localhost:3001"
+    }
+  }
+}

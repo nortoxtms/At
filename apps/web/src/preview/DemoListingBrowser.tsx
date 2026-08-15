@@ -7,7 +7,7 @@ import {
   DEMO_LISTINGS,
   DEMO_LISTING_TYPES,
   DEMO_REGIONS,
-} from '@/content/demo';
+} from '@only-horses/demo-content';
 import { LISTING_TYPE_LABEL_TR } from '@/lib/api';
 
 /**

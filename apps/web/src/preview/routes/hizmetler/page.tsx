@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { DEMO_SERVICES } from '@/content/demo';
+import { DEMO_SERVICES } from '@only-horses/demo-content';
 
 /**
  * The preview's services index — stands in for `[locale]/hizmetler` in the

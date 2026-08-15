@@ -11,6 +11,17 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(3001),
   APP_URL: z.string().url().default('http://localhost:3000'),
+  /**
+   * Extra origins allowed through CORS, comma-separated.
+   *
+   * `APP_URL` is one URL and is validated as one, so it cannot carry a list.
+   * But a single deployment answers more than one front end — the Next.js
+   * site, the Expo web build the mobile screens are reviewed in, and any
+   * per-branch preview origin — and each of those fails at the preflight with
+   * an error that says CORS and reads, inside the app, as "sunucuya
+   * ulaşılamadı". Empty by default: an origin has to be named to be trusted.
+   */
+  CORS_EXTRA_ORIGINS: z.string().default(''),
   API_URL: z.string().url().default('http://localhost:3001'),
 
   // §1.3 P5: the launch region is configuration, not a constant in code.

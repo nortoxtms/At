@@ -52,7 +52,7 @@ cp "$WORK/web/src/preview/routes/ilan-ver/page.tsx" "$WORK/web/src/app/[locale]/
 cat >> "$WORK/web/src/app/[locale]/atlar/[slug]/page.tsx" <<'PARAMS'
 
 // Appended by scripts/build-preview.sh — static export only.
-import { DEMO_LISTINGS as PREVIEW_LISTINGS } from '@/content/demo';
+import { DEMO_LISTINGS as PREVIEW_LISTINGS } from '@only-horses/demo-content';
 
 export function generateStaticParams() {
   return PREVIEW_LISTINGS.flatMap((listing) => [

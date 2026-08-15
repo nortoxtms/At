@@ -1,13 +1,12 @@
 import type {
   JobSearchHit,
+  ListingDetail,
   ListingSearchHit,
   ServiceSearchHit,
 } from '@only-horses/shared-types';
 
-import type { ListingDetail } from '@/lib/api';
-
 /**
- * The demo dataset the static preview runs on.
+ * The demo dataset the static preview and the mobile app run on.
  *
  * The preview has no API, no database and no search engine, and the first
  * version of it dealt with that by removing every page that needed one. That
@@ -23,6 +22,11 @@ import type { ListingDetail } from '@/lib/api';
  *
  * Seller names and handles are replaced with placeholder stables. The rest —
  * breeds, ages, heights, prices, regions, quality scores — is as generated.
+ *
+ * It sits in its own package rather than inside the web app because the mobile
+ * app needs the same fallback for the same reason, and two copies of a dataset
+ * are two datasets: the moment one is re-exported and the other is not, the
+ * two platforms are demonstrating different products.
  */
 
 export const DEMO_LISTINGS: ListingSearchHit[] = [

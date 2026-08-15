@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { DEMO_JOBS } from '@/content/demo';
+import { DEMO_JOBS } from '@only-horses/demo-content';
 import { formatSalary, JOB_TYPE_LABEL_TR } from '@/lib/api';
 
 /**

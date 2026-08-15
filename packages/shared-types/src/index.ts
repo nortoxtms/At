@@ -17,4 +17,5 @@ export * from './welfare.js';
 export * from './health.js';
 export * from './trust.js';
 export * from './units.js';
+export * from './labels.js';
 export * as tokens from './tokens.js';

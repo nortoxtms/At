@@ -1,10 +1,13 @@
+import { SALARY_PERIOD_LABEL_TR } from '@only-horses/shared-types';
 import type {
   JobSearchHit,
+  ListingDetail,
   PlanFeature,
   PlanOption,
   ListingSearchHit,
   ProfessionalSearchHit,
   ServiceSearchHit,
+  TimelineEntry,
 } from '@only-horses/shared-types';
 
 /**
@@ -32,7 +35,7 @@ const IS_STATIC_PREVIEW = process.env.NEXT_PUBLIC_STATIC_PREVIEW === '1';
  * `if (false)` and the dataset never enters the bundle.
  */
 async function demo() {
-  return import('@/content/demo');
+  return import('@only-horses/demo-content');
 }
 
 /**
@@ -53,56 +56,26 @@ function onUnreachable<T>(error: unknown, fallback: T): T {
   throw error;
 }
 
-export interface ListingDetail {
-  id: string;
-  slug: string;
-  title: string;
-  summary: string | null;
-  description: string | null;
-  type: string;
-  status: string;
-  price_amount: string | null;
-  price_currency: string;
-  price_type: string;
-  country_code: string;
-  region: string | null;
-  city: string | null;
-  trial_allowed: boolean;
-  ppe_welcome: boolean;
-  published_at: string | null;
-  view_count: number;
+/**
+ * `ListingDetail` and `TimelineEntry` moved to `@only-horses/shared-types`
+ * when the mobile app started rendering the same listing (§18.2 S08). They are
+ * re-exported here so existing imports keep working and there is still one
+ * obvious place to look for the shape of a listing page.
+ */
+export type { ListingDetail, TimelineEntry };
 
-  horse_name: string;
-  horse_slug: string;
-  sex: string;
-  color: string | null;
-  height_cm: string | null;
-  date_of_birth: string | null;
-  birth_year_estimated: boolean;
-  disciplines: string[];
-  training_level: string | null;
-  rider_level_min: string | null;
-  horse_about: string | null;
-  breed_id: string | null;
-  breed_name_tr: string | null;
-  breed_name_en: string | null;
-  visibility_health: string;
-  visibility_pedigree: string;
-
-  seller_handle: string;
-  seller_name: string;
-  seller_trust_score: number;
-  seller_verification: string;
-  seller_response_rate: string | null;
-}
-
-export interface TimelineEntry {
-  kind: 'registered' | 'health' | 'competition' | 'ownership' | 'listing';
-  date: string;
-  title: string;
-  detail: string | null;
-  referenceId: string | null;
-}
+/**
+ * The §7 enum labels moved to `@only-horses/shared-types` when mobile started
+ * rendering the same enums (§18.2). Re-exported so the components that already
+ * import them from here keep working.
+ */
+export {
+  ACCOMMODATION_LABEL_TR,
+  JOB_TYPE_LABEL_TR,
+  LISTING_TYPE_LABEL_TR,
+  SALARY_PERIOD_LABEL_TR,
+  SEX_LABEL_TR,
+} from '@only-horses/shared-types';
 
 async function get<T>(path: string, revalidate: number): Promise<T | null> {
   try {
@@ -201,22 +174,7 @@ export function formatPrice(
   }).format(Number(amount));
 }
 
-export const SEX_LABEL_TR: Record<string, string> = {
-  mare: 'Kısrak',
-  stallion: 'Aygır',
-  gelding: 'İğdiş',
-  filly: 'Dişi tay',
-  colt: 'Erkek tay',
-};
 
-export const LISTING_TYPE_LABEL_TR: Record<string, string> = {
-  sale: 'Satılık',
-  lease: 'Kiralık',
-  half_lease: 'Yarı kiralık',
-  share: 'Hisse',
-  stud: 'Aygır hizmeti',
-  loan: 'Ödünç',
-};
 
 // ── M4: services, jobs and the professional directory (§19.1) ───────────
 
@@ -348,29 +306,8 @@ export function searchProfessionals(
   return search<ProfessionalSearchHit>('/professionals/search', params);
 }
 
-export const JOB_TYPE_LABEL_TR: Record<string, string> = {
-  full_time: 'Tam zamanlı',
-  part_time: 'Yarı zamanlı',
-  seasonal: 'Sezonluk',
-  contract: 'Sözleşmeli',
-  internship: 'Staj',
-  working_student: 'Çalışan öğrenci',
-};
 
-export const ACCOMMODATION_LABEL_TR: Record<string, string> = {
-  none: 'Konaklama yok',
-  shared: 'Paylaşımlı konaklama',
-  private: 'Özel konaklama',
-  negotiable: 'Konaklama görüşülür',
-};
 
-export const SALARY_PERIOD_LABEL_TR: Record<string, string> = {
-  hour: 'saat',
-  day: 'gün',
-  week: 'hafta',
-  month: 'ay',
-  year: 'yıl',
-};
 
 /** §18.2 S17: a job with no published salary reads "Maaş görüşülür". */
 export function formatSalary(job: {

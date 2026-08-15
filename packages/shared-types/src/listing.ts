@@ -183,3 +183,67 @@ export interface ListingSearchResult {
   facets: Record<string, { value: string; count: number }[]>;
   tookMs: number;
 }
+
+/**
+ * A listing as the detail endpoint returns it (§12).
+ *
+ * Snake-cased, unlike the search hit above, because it comes straight out of
+ * the query rather than through the search projection. That difference is not
+ * cosmetic and is worth keeping visible: a field present here and absent from
+ * `ListingSearchHit` is a field the search index does not carry, so a screen
+ * that needs it has to load the detail.
+ *
+ * It lives in shared-types rather than in the web app because the mobile app
+ * renders the same listing (§18.2 S08) and must not restate the shape.
+ */
+export interface ListingDetail {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  description: string | null;
+  type: string;
+  status: string;
+  price_amount: string | null;
+  price_currency: string;
+  price_type: string;
+  country_code: string;
+  region: string | null;
+  city: string | null;
+  trial_allowed: boolean;
+  ppe_welcome: boolean;
+  published_at: string | null;
+  view_count: number;
+
+  horse_name: string;
+  horse_slug: string;
+  sex: string;
+  color: string | null;
+  height_cm: string | null;
+  date_of_birth: string | null;
+  birth_year_estimated: boolean;
+  disciplines: string[];
+  training_level: string | null;
+  rider_level_min: string | null;
+  horse_about: string | null;
+  breed_id: string | null;
+  breed_name_tr: string | null;
+  breed_name_en: string | null;
+  visibility_health: string;
+  visibility_pedigree: string;
+
+  seller_handle: string;
+  seller_name: string;
+  seller_trust_score: number;
+  seller_verification: string;
+  seller_response_rate: string | null;
+}
+
+/** §20.4's horse timeline, as the API returns it. */
+export interface TimelineEntry {
+  kind: 'registered' | 'health' | 'competition' | 'ownership' | 'listing';
+  date: string;
+  title: string;
+  detail: string | null;
+  referenceId: string | null;
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@only-horses/mobile",
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "dependencies": {
+    "@expo-google-fonts/cormorant-garamond": "^0.4.1",
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo/metro-runtime": "^57.0.10",
+    "@expo/vector-icons": "^15.1.1",
+    "@only-horses/demo-content": "workspace:^",
+    "@only-horses/shared-types": "workspace:*",
+    "expo": "~57.0.13",
+    "expo-constants": "^57.0.11",
+    "expo-font": "^14.0.0",
+    "expo-image": "^57.0.3",
+    "expo-linking": "^57.0.6",
+    "expo-router": "^57.0.13",
+    "expo-secure-store": "^57.0.1",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-dom": "^19.2.3",
+    "react-native": "0.86.2",
+    "react-native-safe-area-context": "^5.9.0",
+    "react-native-screens": "^4.27.0",
+    "react-native-web": "^0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "web:export": "expo export --platform web",
+    "typecheck": "tsc --noEmit"
+  },
+  "private": true
+}

@@ -167,7 +167,7 @@ export default function HorseScreen() {
           <View style={{ gap: theme.space.md }}>
             <Txt variant="h3">Fotoğraflar</Txt>
             <PhotoGrid
-              horseId={String(id)}
+              ownerId={String(id)}
               media={data.media}
               editable={data.source === 'live'}
               onChange={reload}

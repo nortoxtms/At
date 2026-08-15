@@ -25,6 +25,7 @@ const LAUNCH = existsSync(CANDIDATE) ? { executablePath: CANDIDATE } : {};
 const base = (process.argv[2] ?? 'http://localhost:4400').replace(/\/$/, '');
 const stamp = Date.now();
 const horseName = `Demo At ${stamp % 100000}`;
+const productTitle = `Eyer altı ${stamp % 100000}`;
 
 const browser = await chromium.launch(LAUNCH);
 const context = await browser.newContext({
@@ -205,6 +206,47 @@ await step('§5 offers only the transitions the state allows', async () => {
   await expectScreen('Duraklatıldı');
   await tap('Yeniden yayınla');
   await page.waitForTimeout(2000);
+  await expectScreen('Yayında');
+});
+
+await step('the equipment marketplace lists, filters and sells', async () => {
+  await go('/urunler');
+  await expectScreen('Koşum ve saraciye');
+
+  // A group must roll its children up, or the taxonomy looks broken.
+  await tap('Koşum ve saraciye');
+  await page.waitForTimeout(2000);
+  await expectScreen('Eyer');
+
+  await go('/urunler');
+  await byLabel('Ürün ara').fill('wintec');
+  await page.waitForTimeout(2500);
+  await expectScreen('Wintec');
+  await page.getByRole('link').first().click();
+  await page.waitForTimeout(2000);
+  await expectScreen('Künye');
+  await expectScreen('Teslimat');
+});
+
+await step('a product is listed and published', async () => {
+  await go('/urunler/yeni');
+  await byLabel('Kategori').fill('Eyer altı');
+  await tap('Eyer altı');
+  await tap('Devam');
+  await byLabel('Başlık').fill(productTitle);
+  await byLabel('Açıklama').fill(
+    'Az kullanildi, temiz ve yikanmis. Dresaj kesim, beyaz. Kargo alici odemeli.',
+  );
+  await tap('Devam');
+  await byLabel('Fiyat (TRY)').fill('750');
+  await tap('Devam');
+  await tap('Taslağı kaydet');
+  await page.waitForTimeout(3000);
+
+  await expectScreen(productTitle);
+  await expectScreen('Taslak');
+  await tap('Yayınla');
+  await page.waitForTimeout(2500);
   await expectScreen('Yayında');
 });
 

@@ -82,6 +82,7 @@ export default function ProfileScreen() {
         <View style={{ marginTop: theme.space.xxl }}>
           <MenuList
             items={[
+              { label: 'Ekipman', icon: 'cube-outline', href: '/urunler' },
               { label: 'Hizmetler', icon: 'construct-outline', href: '/hizmetler' },
               { label: 'İş ilanları', icon: 'briefcase-outline', href: '/isler' },
               { label: 'Uzmanlar', icon: 'ribbon-outline', href: '/uzmanlar' },
@@ -182,9 +183,11 @@ export default function ProfileScreen() {
           items={[
             { label: 'Ahırım', icon: 'home-outline', href: '/ahir' },
             { label: 'İlanlarım', icon: 'list-outline', href: '/ilanlarim' },
+            { label: 'Ürünlerim', icon: 'cube-outline', href: '/urunlerim' },
             { label: 'Bildirimler', icon: 'notifications-outline', href: '/bildirimler' },
             { label: 'Kaydedilenler', icon: 'bookmark-outline', href: '/kaydedilenler' },
             { label: 'Aramalarım', icon: 'search-outline', href: '/aramalarim' },
+            { label: 'Ekipman', icon: 'cube-outline', href: '/urunler' },
             { label: 'Hizmetler', icon: 'construct-outline', href: '/hizmetler' },
             { label: 'İş ilanları', icon: 'briefcase-outline', href: '/isler' },
             { label: 'Uzmanlar', icon: 'ribbon-outline', href: '/uzmanlar' },

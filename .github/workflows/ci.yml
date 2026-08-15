@@ -140,7 +140,8 @@ jobs:
             / /onboarding /auth /auth/rol /auth/parola /ara /filtreler \
             /ahir /ahir/yeni /ilan-ver /ilanlarim /kaydedilenler /aramalarim \
             /bildirimler /hizmetler /isler /uzmanlar /planlar /hakkinda \
-            /dogrulama /ayarlar /bildir /mesajlar /profil /demo
+            /dogrulama /ayarlar /bildir /mesajlar /profil /demo \
+            /urunler /urunler/yeni /urunlerim
 
       # The demo, with the API not merely absent but unreachable — every
       # request to it is aborted, and any attempt fails the run. This is the
@@ -168,4 +169,6 @@ jobs:
             http://localhost:4400/planlar http://localhost:4400/hakkinda \
             http://localhost:4400/dogrulama http://localhost:4400/ayarlar \
             http://localhost:4400/bildir http://localhost:4400/mesajlar \
-            http://localhost:4400/profil http://localhost:4400/demo
+            http://localhost:4400/profil http://localhost:4400/demo \
+            http://localhost:4400/urunler http://localhost:4400/urunler/yeni \
+            http://localhost:4400/urunlerim

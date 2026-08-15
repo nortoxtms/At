@@ -5,11 +5,12 @@ import { Alert, Image, Pressable, ScrollView, View } from 'react-native';
 import { Txt } from '@/components/Text';
 import { washFromBlurhash } from '@/lib/format';
 import {
-  attachToHorse,
+  attachMedia,
   pickImage,
-  removeHorseMedia,
+  removeMedia,
   uploadImage,
   type HorseMedia,
+  type MediaOwner,
 } from '@/lib/media';
 import { theme } from '@/theme/tokens';
 
@@ -36,12 +37,14 @@ type Tile =
   | { kind: 'pending'; id: string; uri: string; error?: string };
 
 export function PhotoGrid({
-  horseId,
+  ownerId,
+  kind = 'horse',
   media,
   editable,
   onChange,
 }: {
-  horseId: string;
+  ownerId: string;
+  kind?: MediaOwner;
   media: HorseMedia[];
   editable?: boolean;
   onChange?: () => void;
@@ -85,7 +88,7 @@ export function PhotoGrid({
       return;
     }
 
-    const attached = await attachToHorse(horseId, uploaded.mediaId);
+    const attached = await attachMedia(kind, ownerId, uploaded.mediaId);
     setBusy(false);
 
     if (!attached.ok) {
@@ -104,7 +107,7 @@ export function PhotoGrid({
   };
 
   const remove = async (mediaId: string) => {
-    if (await removeHorseMedia(horseId, mediaId)) onChange?.();
+    if (await removeMedia(kind, ownerId, mediaId)) onChange?.();
   };
 
   if (!editable && media.length === 0) return null;
@@ -202,8 +205,9 @@ export function PhotoGrid({
 
       {editable ? (
         <Txt variant="caption" color={theme.color.textSecondary} display={false}>
-          İlk fotoğraf kapak olur. §20.1 — alt üçte biri parlak olan kareler ilanda
-          okunmaz, doğal ışıkta ve sade zeminde çek.
+          {kind === 'product'
+            ? 'İlk fotoğraf kapak olur. Kusuru da çek — sürprizi mesajda değil ilanda ver.'
+            : 'İlk fotoğraf kapak olur. §20.1 — alt üçte biri parlak olan kareler ilanda okunmaz, doğal ışıkta ve sade zeminde çek.'}
         </Txt>
       ) : null}
     </View>

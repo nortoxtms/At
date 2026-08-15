@@ -5,10 +5,12 @@ import {
   getState,
   nextId,
   ownListingHits,
+  ownProductHits,
   persist,
   type DemoConversation,
   type DemoHorse,
   type DemoListing,
+  type DemoProduct,
 } from '@/lib/demo-store';
 
 /**
@@ -41,6 +43,18 @@ const fail = (status: number, code: string, message: string): Result => ({
 
 const now = () => new Date().toISOString();
 const today = () => now().slice(0, 10);
+
+/** The icons the API stores against each product group. */
+const PRODUCT_GROUP_ICON: Record<string, string> = {
+  tack: 'ribbon',
+  rider: 'shirt',
+  horse_care: 'medkit',
+  feed: 'nutrition',
+  stable: 'construct',
+  arena: 'flag',
+  transport: 'bus',
+  other_product: 'ellipsis-horizontal',
+};
 
 const slugify = (value: string) =>
   value
@@ -656,6 +670,223 @@ export async function demoRequest(
     if (catalogue) return ok({ ...catalogue, seller_profile_id: 'demo-seller-1' });
 
     return fail(404, 'NOT_FOUND', 'İlan bulunamadı.');
+  }
+
+  // ── products ────────────────────────────────────────────────────────────
+  if (is('products', 'categories')) {
+    // Counts are the bundled catalogue plus whatever you have listed, so a
+    // tile that says 4 and opens on 5 cannot happen.
+    const own = ownProductHits();
+
+    return ok(
+      CATALOGUE.productCategories.map((entry) => {
+        const children = CATALOGUE.productCategories
+          .filter((child) => child.parentCode === entry.code)
+          .map((child) => child.code);
+
+        const inScope = (code: string) => code === entry.code || children.includes(code);
+
+        return {
+          code: entry.code,
+          parent_code: entry.parentCode,
+          name_tr: entry.name,
+          icon: PRODUCT_GROUP_ICON[entry.code] ?? null,
+          active_count:
+            entry.activeCount + own.filter((product) => inScope(product.category)).length,
+        };
+      }),
+    );
+  }
+
+  if (is('products', 'search')) {
+    const needle = (query.get('q') ?? '').trim().toLocaleLowerCase('tr');
+    const category = query.get('category');
+    const condition = query.get('condition');
+    const delivery = query.get('delivery');
+    const limit = Number(query.get('limit') ?? 50);
+
+    const children = category
+      ? CATALOGUE.productCategories
+          .filter((entry) => entry.parentCode === category)
+          .map((entry) => entry.code)
+      : [];
+
+    const hits = [...ownProductHits(), ...CATALOGUE.products].filter((product) => {
+      // A parent matches its children, as the API rolls them up — otherwise
+      // tapping a group returns nothing and the taxonomy looks broken.
+      if (category && product.category !== category && !children.includes(product.category)) {
+        return false;
+      }
+      if (condition && product.condition !== condition) return false;
+      if (delivery && product.delivery !== delivery && product.delivery !== 'both') return false;
+      if (!needle) return true;
+
+      return [
+        product.title,
+        product.brand,
+        product.model,
+        product.sizeLabel,
+        product.categoryName,
+        product.city,
+      ]
+        .filter(Boolean)
+        .some((field) => String(field).toLocaleLowerCase('tr').includes(needle));
+    });
+
+    return {
+      status: 200,
+      body: {
+        data: hits.slice(0, limit),
+        meta: { page: 1, limit, total: hits.length, hasMore: false },
+      },
+    };
+  }
+
+  if (is('me', 'products')) {
+    return ok(
+      state.products.map((product) => ({
+        id: product.id,
+        slug: product.slug,
+        title: product.title,
+        status: product.status,
+        category: product.category,
+        category_name:
+          CATALOGUE.productCategories.find((entry) => entry.code === product.category)?.name ?? '',
+        price_amount: product.priceAmount === null ? null : String(product.priceAmount),
+        price_currency: product.priceCurrency,
+        price_type: product.priceType,
+        price_unit: product.priceUnit,
+        quantity: product.quantity,
+        view_count: product.viewCount,
+        save_count: product.saveCount,
+        inquiry_count: product.inquiryCount,
+      })),
+    );
+  }
+
+  if (is('products') && method === 'POST') {
+    const product: DemoProduct = {
+      id: nextId('product'),
+      slug: `${slugify(String(payload.title ?? 'urun'))}-${state.seq}`,
+      category: String(payload.category ?? 'other_product'),
+      title: String(payload.title ?? ''),
+      description: String(payload.description ?? ''),
+      brand: (payload.brand as string) ?? null,
+      model: (payload.model as string) ?? null,
+      sizeLabel: (payload.sizeLabel as string) ?? null,
+      color: (payload.color as string) ?? null,
+      condition: String(payload.condition ?? 'good'),
+      priceAmount: payload.priceAmount ? Number(payload.priceAmount) : null,
+      priceCurrency: String(payload.priceCurrency ?? 'TRY'),
+      priceType: String(payload.priceType ?? (payload.priceAmount ? 'fixed' : 'on_request')),
+      priceUnit: String(payload.priceUnit ?? 'item'),
+      quantity: Number(payload.quantity ?? 1),
+      delivery: String(payload.delivery ?? 'pickup'),
+      shippingNote: (payload.shippingNote as string) ?? null,
+      city: (payload.city as string) ?? state.profile.city,
+      status: 'draft',
+      viewCount: 0,
+      saveCount: 0,
+      inquiryCount: 0,
+      createdAt: now(),
+    };
+
+    state.products.unshift(product);
+    await persist();
+    return created({ id: product.id, slug: product.slug });
+  }
+
+  if (segments[0] === 'products' && segments[2] === 'media') {
+    const productId = at(1) ?? '';
+
+    if (method === 'GET') {
+      return ok(
+        state.media
+          .filter((entry) => entry.horseId === productId)
+          .map((entry, index) => ({
+            mediaId: entry.mediaId,
+            url: entry.uri,
+            category: 'general',
+            sortOrder: index,
+            visibility: 'public',
+            type: 'image',
+            blurhash: null,
+            width: null,
+            height: null,
+          })),
+      );
+    }
+
+    if (method === 'POST') {
+      const mediaId = String(payload.mediaId ?? '');
+      const pending = state.media.find((entry) => entry.mediaId === mediaId);
+      if (pending) pending.horseId = productId;
+      await persist();
+      return created({ attached: mediaId });
+    }
+
+    if (method === 'DELETE') {
+      state.media = state.media.filter((entry) => entry.mediaId !== at(3));
+      await persist();
+      return noContent();
+    }
+  }
+
+  if (segments[0] === 'products' && segments.length === 3 && method === 'POST') {
+    const product = state.products.find((entry) => entry.id === at(1));
+    if (!product) return fail(404, 'NOT_FOUND', 'Ürün bulunamadı.');
+
+    const next = TRANSITIONS[product.status]?.[at(2) ?? ''];
+    if (!next) {
+      return fail(409, 'CONFLICT', `Bu ürün "${product.status}" durumundayken bu işlem yapılamaz.`);
+    }
+
+    product.status = next;
+    if (next === 'active') {
+      product.viewCount += 3;
+      notify('listing_published', `${product.title} yayında`, 'Ürünün ekipman pazarında.', {});
+    }
+
+    await persist();
+    return ok({ status: next });
+  }
+
+  if (segments[0] === 'products' && segments.length === 2 && method === 'GET') {
+    const own = state.products.find((entry) => entry.slug === at(1) || entry.id === at(1));
+
+    if (own) {
+      own.viewCount += 1;
+      const hit = ownProductHits().find((entry) => entry.id === own.id);
+
+      return ok({
+        ...(hit ?? {}),
+        id: own.id,
+        slug: own.slug,
+        title: own.title,
+        description: own.description,
+        shippingNote: own.shippingNote,
+        color: own.color,
+        status: own.status,
+        viewCount: own.viewCount,
+        sellerProfileId: state.profile.id,
+        images: state.media.filter((entry) => entry.horseId === own.id).map((entry) => entry.uri),
+      });
+    }
+
+    const catalogue = CATALOGUE.products.find((entry) => entry.slug === at(1));
+    if (!catalogue) return fail(404, 'NOT_FOUND', 'Ürün bulunamadı.');
+
+    return ok({
+      ...catalogue,
+      description:
+        'Bu ürün örnek veridir. Demo modunda satıcıya yazabilir, konuşmanın nasıl açıldığını görebilirsin.',
+      shippingNote: null,
+      color: null,
+      status: 'active',
+      viewCount: 12,
+      sellerProfileId: 'demo-seller-1',
+      images: [],
+    });
   }
 
   // ── services, jobs, professionals ───────────────────────────────────────

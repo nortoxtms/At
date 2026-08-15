@@ -8,6 +8,7 @@ export * from './horse.js';
 export * from './listing.js';
 export * from './billing.js';
 export * from './service.js';
+export * from './product.js';
 export * from './job.js';
 export * from './review.js';
 export * from './saved.js';

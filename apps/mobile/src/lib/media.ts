@@ -137,18 +137,42 @@ export async function uploadImage(asset: {
   return { ok: true, mediaId: intent.data.mediaId };
 }
 
-/** §12 POST /horses/:id/media — attach an uploaded asset to a horse. */
+/**
+ * What a photo can belong to.
+ *
+ * Horses and products both take media through the same three-step upload and
+ * differ only in the path, so the grid is generic over this rather than
+ * duplicated. A third owner type is one line here.
+ */
+export type MediaOwner = 'horse' | 'product';
+
+const OWNER_PATH: Record<MediaOwner, string> = {
+  horse: 'horses',
+  product: 'products',
+};
+
+/** §12 POST /{horses|products}/:id/media — attach an uploaded asset. */
+export async function attachMedia(
+  kind: MediaOwner,
+  ownerId: string,
+  mediaId: string,
+  category = 'general',
+): Promise<{ ok: boolean; message?: string }> {
+  const result = await api(`/${OWNER_PATH[kind]}/${ownerId}/media`, {
+    method: 'POST',
+    body: JSON.stringify(kind === 'horse' ? { mediaId, category } : { mediaId }),
+  });
+
+  return result.ok ? { ok: true } : { ok: false, message: result.error.message };
+}
+
+/** Kept for the horse call sites, which read better with the specific name. */
 export async function attachToHorse(
   horseId: string,
   mediaId: string,
   category = 'general',
 ): Promise<{ ok: boolean; message?: string }> {
-  const result = await api(`/horses/${horseId}/media`, {
-    method: 'POST',
-    body: JSON.stringify({ mediaId, category }),
-  });
-
-  return result.ok ? { ok: true } : { ok: false, message: result.error.message };
+  return attachMedia('horse', horseId, mediaId, category);
 }
 
 /**
@@ -165,9 +189,32 @@ export async function listHorseMedia(horseId: string): Promise<HorseMedia[]> {
   return result.ok && Array.isArray(result.data) ? result.data : [];
 }
 
-export async function removeHorseMedia(horseId: string, mediaId: string): Promise<boolean> {
-  const result = await api(`/horses/${horseId}/media/${mediaId}`, { method: 'DELETE' });
+export async function removeMedia(
+  kind: MediaOwner,
+  ownerId: string,
+  mediaId: string,
+): Promise<boolean> {
+  const result = await api(`/${OWNER_PATH[kind]}/${ownerId}/media/${mediaId}`, {
+    method: 'DELETE',
+  });
   return result.ok;
+}
+
+export async function removeHorseMedia(horseId: string, mediaId: string): Promise<boolean> {
+  return removeMedia('horse', horseId, mediaId);
+}
+
+/**
+ * A product's photos.
+ *
+ * Sent authenticated for the same reason the horse's are: §8's policy shows a
+ * draft's media to its owner and to nobody else, so asking anonymously returns
+ * an empty gallery for the person who uploaded it.
+ */
+export async function listProductMedia(productId: string): Promise<HorseMedia[]> {
+  const result = await api<{ images?: string[] } | HorseMedia[]>(`/products/${productId}/media`);
+  if (result.ok && Array.isArray(result.data)) return result.data as HorseMedia[];
+  return [];
 }
 
 export { API_URL };

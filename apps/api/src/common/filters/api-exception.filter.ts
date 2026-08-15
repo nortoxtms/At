@@ -33,6 +33,16 @@ export class ApiException extends HttpException {
     return new ApiException('UNAUTHORIZED', message, HttpStatus.UNAUTHORIZED);
   }
 
+  /**
+   * §12 has a CONFLICT code and nothing constructed one, so every "you cannot
+   * do that from this state" came back as a 400 that reads like bad input.
+   * A lifecycle refusal is not a validation error: the request was well
+   * formed, the world just is not in the state it assumed.
+   */
+  static conflict(message: string, details?: unknown) {
+    return new ApiException('CONFLICT', message, HttpStatus.CONFLICT, details);
+  }
+
   static validation(message: string, details?: unknown) {
     return new ApiException('VALIDATION_ERROR', message, HttpStatus.BAD_REQUEST, details);
   }

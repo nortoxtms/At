@@ -1,4 +1,5 @@
 export * from './reference.js';
+export * from './products.js';
 export type { ReferenceItem } from './types.js';
 
 import type {

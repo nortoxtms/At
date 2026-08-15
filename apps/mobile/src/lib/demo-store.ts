@@ -5,6 +5,8 @@ import {
   DEMO_JOBS,
   DEMO_LISTINGS,
   DEMO_LISTING_DETAIL,
+  DEMO_PRODUCTS,
+  DEMO_PRODUCT_CATEGORIES,
   DEMO_SERVICES,
 } from '@only-horses/demo-content';
 import type { ListingSearchHit } from '@only-horses/shared-types';
@@ -99,6 +101,32 @@ export interface DemoListing {
   createdAt: string;
 }
 
+export interface DemoProduct {
+  id: string;
+  slug: string;
+  category: string;
+  title: string;
+  description: string;
+  brand: string | null;
+  model: string | null;
+  sizeLabel: string | null;
+  color: string | null;
+  condition: string;
+  priceAmount: number | null;
+  priceCurrency: string;
+  priceType: string;
+  priceUnit: string;
+  quantity: number;
+  delivery: string;
+  shippingNote: string | null;
+  city: string | null;
+  status: string;
+  viewCount: number;
+  saveCount: number;
+  inquiryCount: number;
+  createdAt: string;
+}
+
 export interface DemoMessage {
   id: string;
   conversationId: string;
@@ -167,6 +195,7 @@ export interface DemoState {
   health: DemoHealth[];
   competitions: DemoCompetition[];
   listings: DemoListing[];
+  products: DemoProduct[];
   conversations: DemoConversation[];
   messages: DemoMessage[];
   saved: DemoSaved[];
@@ -265,6 +294,7 @@ function seed(): DemoState {
       },
     ],
     listings: [],
+    products: [],
     conversations: [
       {
         id: conversationId,
@@ -409,6 +439,50 @@ export function ownListingHits(): ListingSearchHit[] {
     });
 }
 
+/**
+ * Your own products, in the shape the browse screen renders.
+ *
+ * Mixed into the bundled catalogue rather than kept apart, for the same reason
+ * horse listings are: "where did my listing go" is the first question a
+ * separate list produces.
+ */
+export function ownProductHits() {
+  const current = getState();
+
+  return current.products
+    .filter((product) => product.status === 'active')
+    .map((product) => ({
+      id: product.id,
+      slug: product.slug,
+      title: product.title,
+      category: product.category,
+      categoryName:
+        DEMO_PRODUCT_CATEGORIES.find((entry) => entry.code === product.category)?.name ?? null,
+      parentCategory:
+        DEMO_PRODUCT_CATEGORIES.find((entry) => entry.code === product.category)?.parentCode ?? null,
+      brand: product.brand,
+      model: product.model,
+      sizeLabel: product.sizeLabel,
+      condition: product.condition,
+      priceAmount: product.priceAmount,
+      priceCurrency: product.priceCurrency,
+      priceType: product.priceType,
+      priceUnit: product.priceUnit,
+      quantity: product.quantity,
+      delivery: product.delivery,
+      countryCode: 'TR',
+      region: product.city,
+      city: product.city,
+      sellerHandle: current.profile.handle,
+      sellerName: current.profile.displayName,
+      sellerVerification: current.profile.verificationLevel,
+      sellerTrustScore: current.profile.trustScore,
+      coverImage: current.media.find((entry) => entry.horseId === product.id)?.uri ?? null,
+      isBoosted: false,
+      publishedAt: product.createdAt,
+    }));
+}
+
 export const CATALOGUE = {
   listings: DEMO_LISTINGS,
   listingDetail: DEMO_LISTING_DETAIL,
@@ -416,4 +490,6 @@ export const CATALOGUE = {
   jobs: DEMO_JOBS,
   breeds: DEMO_BREEDS,
   disciplines: DEMO_DISCIPLINES,
+  products: DEMO_PRODUCTS,
+  productCategories: DEMO_PRODUCT_CATEGORIES,
 };

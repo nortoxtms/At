@@ -3,7 +3,10 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { ProductSearchHit } from '@only-horses/shared-types';
+
 import { ListingCard } from '@/components/ListingCard';
+import { ProductCard } from '@/components/ProductCard';
 import { Txt } from '@/components/Text';
 import { Wordmark } from '@/components/Wordmark';
 import { DemoNotice, EmptyState, Loading } from '@/components/ui';
@@ -25,13 +28,24 @@ import { theme } from '@/theme/tokens';
  * can search, rather than a field on Home that has to keep its own state in
  * sync with the one on the search tab.
  */
+/**
+ * Six tiles, two rows of three.
+ *
+ * §18.0 resolved the fifth tile as Jobs when there were five things to reach.
+ * There are six now: equipment is not a sub-case of anything above it — a
+ * saddle, a ton of hay and fifty metres of fencing are what a yard buys most
+ * weeks, and burying that behind "Hizmetler" would hide the busiest half of
+ * the market. Two rows of three stays reachable with one thumb at 390 pt;
+ * a single row of six does not.
+ */
 const CATEGORIES: {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   href: string;
 }[] = [
-  { label: 'Satılık', icon: 'pricetag-outline', href: '/ara?type=sale' },
-  { label: 'Kiralık', icon: 'repeat-outline', href: '/ara?type=lease' },
+  { label: 'Satılık at', icon: 'pricetag-outline', href: '/ara?type=sale' },
+  { label: 'Kiralık at', icon: 'repeat-outline', href: '/ara?type=lease' },
+  { label: 'Ekipman', icon: 'cube-outline', href: '/urunler' },
   { label: 'Hizmetler', icon: 'construct-outline', href: '/hizmetler' },
   { label: 'Uzmanlar', icon: 'ribbon-outline', href: '/uzmanlar' },
   { label: 'İş ilanları', icon: 'briefcase-outline', href: '/isler' },
@@ -49,6 +63,11 @@ export default function HomeScreen() {
     const result = await api<{ readAt: string | null }[]>('/notifications?unreadOnly=true&limit=50');
     return result.ok && Array.isArray(result.data) ? result.data.length : 0;
   }, [me?.id]);
+
+  const { data: products } = useAsync(async () => {
+    const result = await api<ProductSearchHit[]>('/products/search?limit=4', { auth: false });
+    return result.ok && Array.isArray(result.data) ? result.data : [];
+  }, []);
 
   const unread = unreadCount ?? 0;
   const listings = data?.data ?? [];
@@ -160,7 +179,8 @@ export default function HomeScreen() {
           marginTop: theme.space.xl,
           paddingHorizontal: theme.screenPadding,
           flexDirection: 'row',
-          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          rowGap: theme.space.lg,
         }}
       >
         {CATEGORIES.map((category) => (
@@ -169,7 +189,12 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel={category.label}
             onPress={() => router.push(category.href as never)}
-            style={({ pressed }) => ({ alignItems: 'center', gap: 6, opacity: pressed ? 0.7 : 1, flex: 1 })}
+            style={({ pressed }) => ({
+              alignItems: 'center',
+              gap: 6,
+              opacity: pressed ? 0.7 : 1,
+              width: '33.33%',
+            })}
           >
             <View
               style={{
@@ -215,6 +240,41 @@ export default function HomeScreen() {
               </View>
             ))}
           </ScrollView>
+        </View>
+      ) : null}
+
+      {(products ?? []).length > 0 ? (
+        <View style={{ marginTop: theme.space.xxl, paddingHorizontal: theme.screenPadding }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: theme.space.md,
+            }}
+          >
+            <Txt variant="h2">Ekipman</Txt>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Tüm ekipman"
+              onPress={() => router.push('/urunler')}
+              hitSlop={8}
+              style={{ minHeight: theme.metric.minTouchTarget, justifyContent: 'center' }}
+            >
+              <Txt variant="small" color={theme.color.goldSoft} display={false}>
+                Tümü
+              </Txt>
+            </Pressable>
+          </View>
+
+          {(products ?? []).slice(0, 4).map((product, index) => (
+            <View key={product.id}>
+              {index > 0 ? (
+                <View style={{ height: 1, backgroundColor: theme.color.border }} />
+              ) : null}
+              <ProductCard hit={product} />
+            </View>
+          ))}
         </View>
       ) : null}
 

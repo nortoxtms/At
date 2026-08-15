@@ -460,8 +460,12 @@ export class HorsesService {
                 WHEN 'sold' THEN 'İlan kapandı — satıldı'
                 WHEN 'active' THEN 'İlan yayınlandı'
                 ELSE 'İlan' END,
+              -- Casting numeric to text keeps the scale, so a listing at
+              -- 240 000 TRY renders on the timeline as "240000.00 TRY".
+              -- Trimming it here rather than in each client keeps the two
+              -- apps from disagreeing about it.
               CASE WHEN l.price_amount IS NOT NULL
-                   THEN l.price_amount::text || ' ' || l.price_currency END,
+                   THEN trim_scale(l.price_amount)::text || ' ' || l.price_currency END,
               l.id::text
        FROM listings l
        WHERE l.horse_id = $1 AND l.published_at IS NOT NULL

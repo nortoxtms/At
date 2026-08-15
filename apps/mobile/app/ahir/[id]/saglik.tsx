@@ -33,10 +33,10 @@ function normalise(record: HealthRecord): SampleHealthRecord {
   return {
     id: record.id,
     kind: record.type,
-    date: record.performed_on,
+    date: record.performedOn,
     title: record.title,
     detail: record.notes ?? '',
-    nextDue: record.next_due_on,
+    nextDue: record.nextDueOn,
   };
 }
 

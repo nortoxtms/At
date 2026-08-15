@@ -3,16 +3,15 @@
  * The authenticated web journey, in a browser.
  *
  * §18.2 places signing in, your horses, your listings and messaging in the
- * mobile app. There is no mobile app (README, "known gaps"), so those screens
- * exist on the web instead — and unlike the public pages, nothing about them
- * is exercised by the milestone acceptance scripts, which talk to the API
- * directly and never hold a session.
+ * mobile app. They are on the web too — the same account, the same API — and
+ * unlike the public pages nothing about them is exercised by the milestone
+ * acceptance scripts, which talk to the API directly and never hold a session.
  *
- * This drives the session the way a person does: register in the browser, own
- * a horse, publish a listing, act on it, and answer a message. It asserts the
- * two things a cookie-session build gets wrong most often — that the token is
- * not reachable from script, and that a signed-out visitor cannot open a
- * signed-in page.
+ * This drives the session the way a person does: register in the browser,
+ * record a horse, add to its history, put it on the market, sell a saddle
+ * beside it, and answer a message. It asserts the two things a cookie-session
+ * build gets wrong most often — that the token is not reachable from script,
+ * and that a signed-out visitor cannot open a signed-in page.
  *
  *   node scripts/web-account.mjs
  *
@@ -153,7 +152,178 @@ async function main() {
     if (horses < 1) fail('the transferred horse is not on "Atlarım"');
     pass(`${horses} horse(s) listed`);
 
-    console.log(bold('7. §18.2 S21/S22 — a conversation, read and answered'));
+    console.log(bold('7. §18.2 S10 — record a horse from the web form'));
+    await page.goto(`${WEB}/tr/hesap/atlarim/yeni`, { waitUntil: 'networkidle' });
+    const horseName = `Web Kisrak ${STAMP}`;
+    await page.fill('input[name=name]', horseName);
+    // The radios are visually hidden behind their labels (§20's chip style), so
+    // they are checked rather than clicked — a `sr-only` input is 1px and a
+    // click lands on whatever the label is sitting on.
+    await page.check('input[name=sex][value=mare]', { force: true });
+    await page.fill('input[name=birthYear]', '2018');
+    await page.fill('input[name=heightCm]', '158');
+    await page.click('button[type=submit]');
+    // Not `**/tr/hesap/atlarim/**` — that glob matches the /yeni page this
+    // click started on, so the wait returns instantly and every assertion
+    // after it reads the form instead of the record.
+    await page.waitForURL(
+      (url) => /\/tr\/hesap\/atlarim\/[0-9a-f-]{36}/.test(url.pathname),
+      { timeout: 20_000 },
+    );
+
+    const horseUrl = page.url();
+    const webHorseId = horseUrl.split('/atlarim/')[1].split(/[?#]/)[0];
+    if (!(await page.locator('main').innerText()).includes(horseName)) {
+      fail('the new horse record did not open on its own page');
+    }
+    pass(`created ${horseName} and landed on its record`);
+
+    console.log(bold('8. §18.2 S12 — a health entry, and the reminder it schedules'));
+    await page.goto(`${WEB}/tr/hesap/atlarim/${webHorseId}/saglik/yeni`, {
+      waitUntil: 'networkidle',
+    });
+    await page.selectOption('select[name=type]', 'vaccination');
+    await page.fill('input[name=title]', 'Grip–tetanoz rapel');
+    await page.selectOption('select[name=intervalDays]', '365');
+    await page.click('button[type=submit]');
+    await page.waitForURL('**/saglik', { timeout: 20_000 });
+
+    text = await page.locator('main').innerText();
+    if (!text.includes('Grip–tetanoz rapel')) fail('the health entry is not in the log');
+    if (!text.includes('Sırada')) fail('the reminder did not produce a "Sırada" section');
+    pass('the entry is logged and its next due date is scheduled');
+
+    console.log(bold('9. §18.2 S13 — a competition result, on the §20.4 timeline'));
+    await page.goto(`${WEB}/tr/hesap/atlarim/${webHorseId}/yarisma`, {
+      waitUntil: 'networkidle',
+    });
+    await page.fill('input[name=eventName]', 'Bursa Bölge Şampiyonası');
+    await page.fill('input[name=placing]', '3');
+    await page.fill('input[name=riderName]', 'Deniz Y.');
+    await page.click('button[type=submit]');
+    await page.waitForURL(`**/tr/hesap/atlarim/${webHorseId}`, { timeout: 20_000 });
+
+    text = await page.locator('main').innerText();
+    if (!text.includes('Bursa Bölge Şampiyonası')) {
+      fail('the competition result is not on the timeline');
+    }
+    if (!text.includes('Grip–tetanoz rapel')) {
+      fail('the health entry is not on the timeline — §20.4 runs both through one rule');
+    }
+    pass('health and competition both appear on the horse timeline');
+
+    console.log(bold('10. §18.2 S13 — compose a listing, as a draft'));
+    await page.goto(`${WEB}/tr/hesap/ilan-ver?horse=${webHorseId}`, {
+      waitUntil: 'networkidle',
+    });
+    // §3.3: this account is unverified, so the page must say publishing is
+    // gated before offering the form rather than after the API refuses.
+    if (!(await page.locator('main').innerText()).includes('kimlik doğrulaması')) {
+      fail('the composer does not state §3.3’s publishing rule to an unverified seller');
+    }
+    await page.selectOption('select[name=horseId]', webHorseId);
+    await page.selectOption('select[name=type]', 'sale');
+    await page.fill('input[name=title]', `${horseName} — satılık`);
+    await page.fill(
+      'textarea[name=description]',
+      'Sakin, temiz karakterli bir kısrak. Amatör binici için uygun, her türlü denemeye açığız.',
+    );
+    await page.fill('input[name=priceAmount]', '185000');
+    await page.click('button[type=submit]');
+    await page.waitForURL('**/tr/hesap/ilanlarim', { timeout: 20_000 });
+
+    text = await page.locator('main').innerText();
+    if (!text.includes(`${horseName} — satılık`)) fail('the draft listing is not on "İlanlarım"');
+    if (!text.includes('Taslak')) fail('the new listing is not a draft');
+    pass('the composer saved a draft, and it shows as one');
+
+    console.log(bold('11. The product marketplace — sell something that is not a horse'));
+    await page.goto(`${WEB}/tr/hesap/urunlerim/yeni`, { waitUntil: 'networkidle' });
+    const productTitle = `Wintec eyer ${STAMP}`;
+    await page.selectOption('select[name=category]', 'saddle');
+    await page.fill('input[name=title]', productTitle);
+    await page.fill(
+      'textarea[name=description]',
+      'İki sezon kullanıldı, kaltak sağlam, kolonu ve üzengisi dahil. Yerinde denenebilir.',
+    );
+    await page.fill('input[name=brand]', 'Wintec');
+    await page.fill('input[name=sizeLabel]', '17.5"');
+    await page.fill('input[name=priceAmount]', '18500');
+    await page.selectOption('select[name=delivery]', 'both');
+    await page.fill('input[name=region]', 'Ankara');
+    await page.click('button[type=submit]');
+    await page.waitForURL('**/tr/hesap/urunlerim', { timeout: 20_000 });
+
+    text = await page.locator('main').innerText();
+    if (!text.includes(productTitle)) fail('the product is not on "Ürünlerim"');
+    if (!text.includes('Taslak')) fail('the new product is not a draft');
+    pass('the product was created as a draft');
+
+    await page.click('button:has-text("Yayınla")');
+    await page.waitForTimeout(1500);
+    if (!(await page.locator('main').innerText()).includes('Yayında')) {
+      fail('publishing the product did not change its status');
+    }
+    pass('“Yayınla” moved it to Yayında');
+
+    console.log(bold('12. §11 — the published product is findable in the marketplace'));
+    await page.goto(`${WEB}/tr/urunler?q=${encodeURIComponent(`Wintec eyer ${STAMP}`)}`, {
+      waitUntil: 'networkidle',
+    });
+    if (!(await page.locator('main').innerText()).includes(productTitle)) {
+      fail('the published product does not come back from the product search');
+    }
+    pass('search on the seller’s own words finds it');
+
+    await page.click(`a:has-text("${productTitle}")`);
+    await page.waitForURL('**/tr/urunler/**', { timeout: 15_000 });
+    const detail = await page.locator('main').innerText();
+    if (!detail.includes('Wintec')) fail('the brand is missing from the product page');
+    if (!detail.includes('17.5"')) fail('the size is missing from the product page');
+    if (!detail.includes('Elden teslim veya kargo')) fail('the delivery terms are missing');
+    pass('the detail page carries brand, size and delivery terms');
+
+    console.log(bold('13. §10 / §21 — saved items, saved searches and notifications render'));
+    for (const [path, heading] of [
+      ['/tr/hesap/kaydedilenler', 'Kaydedilenler'],
+      ['/tr/hesap/aramalarim', 'Aramalarım'],
+      ['/tr/hesap/bildirimler', 'Bildirimler'],
+      ['/tr/hesap/dogrulama', 'Doğrulama'],
+      ['/tr/hesap/ayarlar', 'Ayarlar'],
+    ]) {
+      await page.goto(`${WEB}${path}`, { waitUntil: 'networkidle' });
+      const body = await page.locator('main').innerText();
+      if (!body.includes(heading)) fail(`${path} did not render its own heading`);
+      // §20.7: a screen with nothing in it names the next action rather than
+      // showing a blank panel.
+      if (body.trim().length < 80) fail(`${path} rendered almost nothing`);
+    }
+    pass('all five render, with content rather than a blank panel');
+
+    console.log(bold('14. §18.2 S23 — the seller’s public profile is reachable and public'));
+    // Read the handle off the account page rather than from the API. The
+    // session is an httpOnly cookie held by *this* server, so a fetch from the
+    // page carries no bearer token and /v1/me answers 401 — which is the whole
+    // point of the cookie, and why the first version of this step always
+    // skipped itself.
+    await page.goto(`${WEB}/tr/hesap`, { waitUntil: 'networkidle' });
+    const handle = (await page.locator('main').innerText()).match(/@([a-z0-9-]+)/i)?.[1] ?? null;
+    if (!handle) fail('the account page does not show the signed-in handle');
+
+    const anon = await browser.newContext();
+    const anonPage = await anon.newPage();
+    await anonPage.goto(`${WEB}/tr/profil/${handle}`, { waitUntil: 'networkidle' });
+    const publicText = await anonPage.locator('main').innerText();
+    if (!publicText.includes('Hesap Turu')) {
+      fail('the public profile does not render for a signed-out visitor');
+    }
+    if (!publicText.includes('Doğrulanmamış')) {
+      fail('the public profile does not state the seller’s verification level');
+    }
+    await anon.close();
+    pass(`@${handle} renders signed out, with its verification level`);
+
+    console.log(bold('15. §18.2 S21/S22 — a conversation, read and answered'));
     const buyerToken = await registerApi(`buyer-${STAMP}`);
     const conversation = await apiPost(
       '/conversations',
@@ -182,7 +352,7 @@ async function main() {
     if (!thread.includes('Deneme binişi')) fail('the reply is not in the thread');
     pass('the reply was sent and is in the thread');
 
-    console.log(bold('8. Sign out'));
+    console.log(bold('16. Sign out'));
     await page.goto(`${WEB}/tr/hesap`, { waitUntil: 'networkidle' });
     await page.click('button:has-text("Çıkış yap")');
     await page.waitForURL('**/tr/giris', { timeout: 20_000 });

@@ -12,6 +12,7 @@ import {
   type DemoListing,
   type DemoProduct,
 } from '@/lib/demo-store';
+import { HEALTH_TYPES } from '@/lib/endpoints';
 
 /**
  * The demo's server, in one file.
@@ -454,9 +455,12 @@ export async function demoRequest(
             type: entry.type,
             title: entry.title,
             notes: entry.notes,
-            performed_on: entry.performedOn,
-            next_due_on: entry.nextDueOn,
-            is_sensitive: false,
+            performedOn: entry.performedOn,
+            nextDueOn: entry.nextDueOn,
+            typeLabel: HEALTH_TYPES.find((option) => option.id === entry.type)?.label ?? 'Diğer',
+            performedByName: null,
+            clinicName: null,
+            isSensitive: false,
           })),
       );
     }

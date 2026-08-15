@@ -79,9 +79,11 @@ export default async function AccountPage() {
     ['Atlarım', dashboard?.horses ?? 0, '/tr/hesap/atlarim'],
     ['Aktif ilan', dashboard?.activeListings ?? 0, '/tr/hesap/ilanlarim'],
     ['Taslak ilan', dashboard?.draftListings ?? 0, '/tr/hesap/ilanlarim'],
-    ['Kaydedilenler', dashboard?.savedItems ?? 0, null],
-    ['Okunmamış bildirim', dashboard?.unreadNotifications ?? 0, null],
-    ['Yaklaşan hatırlatma', dashboard?.dueReminders ?? 0, null],
+    ['Kaydedilenler', dashboard?.savedItems ?? 0, '/tr/hesap/kaydedilenler'],
+    ['Okunmamış bildirim', dashboard?.unreadNotifications ?? 0, '/tr/hesap/bildirimler'],
+    // The reminders are health entries with a due date, so the counter goes to
+    // the horses they hang off rather than to a screen of its own.
+    ['Yaklaşan hatırlatma', dashboard?.dueReminders ?? 0, '/tr/hesap/atlarim'],
   ];
 
   return (
@@ -131,6 +133,22 @@ export default async function AccountPage() {
         )}
       </section>
 
+      <section className="mt-8 flex flex-wrap gap-2">
+        {[
+          ['At ekle', '/tr/hesap/atlarim/yeni'],
+          ['İlan ver', '/tr/hesap/ilan-ver'],
+          ['Ürün ekle', '/tr/hesap/urunlerim/yeni'],
+        ].map(([label, href]) => (
+          <Link
+            key={href}
+            href={href}
+            className="rounded-md border border-border px-4 py-2 text-small hover:bg-surface-raised/60"
+          >
+            {label}
+          </Link>
+        ))}
+      </section>
+
       <section className="mt-8">
         <h2 className="font-display text-h2 mb-4">Özet</h2>
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -163,7 +181,13 @@ export default async function AccountPage() {
           {[
             ['Atlarım', '/tr/hesap/atlarim'],
             ['İlanlarım', '/tr/hesap/ilanlarim'],
+            ['Ürünlerim', '/tr/hesap/urunlerim'],
             ['Mesajlarım', '/tr/hesap/mesajlar'],
+            ['Kaydedilenler', '/tr/hesap/kaydedilenler'],
+            ['Aramalarım', '/tr/hesap/aramalarim'],
+            ['Bildirimler', '/tr/hesap/bildirimler'],
+            ['Doğrulama', '/tr/hesap/dogrulama'],
+            ['Ayarlar', '/tr/hesap/ayarlar'],
             ['Planlar ve faturalama', '/tr/fiyatlandirma'],
           ].map(([label, href]) => (
             <li key={href}>

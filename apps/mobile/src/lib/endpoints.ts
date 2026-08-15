@@ -2,6 +2,7 @@ import {
   healthRecordType,
   horseSex,
   listingType,
+  ROLE_LABEL_TR,
   roleType,
 } from '@only-horses/shared-types';
 import type { HealthRecordType, RoleType } from '@only-horses/shared-types';
@@ -62,15 +63,29 @@ export interface ConversationMessage {
   created_at: string;
 }
 
-/** GET /horses/:id/health. */
+/**
+ * GET /horses/:id/health.
+ *
+ * camelCase — unlike GET /horses/:id, and unlike most of §12's list endpoints,
+ * because this one maps its rows through `toHealthRecord` before answering.
+ * This interface said snake_case, which is worse than saying nothing: the
+ * compiler agreed with the app, every date read as undefined, and a horse with
+ * four years of vaccinations rendered four blank dates and no reminders.
+ *
+ * `typeLabel` comes down with the row, so the client does not need its own
+ * copy of §7's Turkish labels to render a log.
+ */
 export interface HealthRecord {
   id: string;
   type: HealthRecordType;
+  typeLabel: string;
   title: string;
   notes: string | null;
-  performed_on: string;
-  next_due_on: string | null;
-  is_sensitive: boolean;
+  performedOn: string;
+  nextDueOn: string | null;
+  performedByName: string | null;
+  clinicName: string | null;
+  isSensitive: boolean;
 }
 
 /**
@@ -108,20 +123,28 @@ export interface MyHorse {
  * database speaks. Mapping them here keeps the picker readable without letting
  * a label leak into a request body.
  */
-export const ROLE_OPTIONS: { id: RoleType; label: string; body: string }[] = [
-  { id: 'horse_owner', label: 'At sahibi', body: 'Bir ya da daha fazla atım var' },
-  { id: 'rider', label: 'Binici', body: 'Biniyorum, yarışıyorum' },
-  { id: 'trainer', label: 'Eğitmen', body: 'At ve binici eğitiyorum' },
-  { id: 'instructor', label: 'Antrenör', body: 'Ders veriyorum' },
-  { id: 'breeder', label: 'Yetiştirici', body: 'Damızlık ve tay yetiştiriyorum' },
-  { id: 'veterinarian', label: 'Veteriner', body: 'Sağlık hizmeti veriyorum' },
-  { id: 'farrier', label: 'Nalbant', body: 'Nal ve tırnak bakımı' },
-  { id: 'groom', label: 'Seyis', body: 'Günlük bakım ve ahır işleri' },
-  { id: 'transporter', label: 'Nakliyeci', body: 'At taşıyorum' },
-  { id: 'equine_therapist', label: 'Terapist', body: 'Fizyoterapi ve rehabilitasyon' },
-  { id: 'ranch_manager', label: 'İşletme yöneticisi', body: 'Ahır, tesis ya da kulüp' },
-  { id: 'agent', label: 'Aracı', body: 'Alım satımda temsil ediyorum' },
+const ROLE_BODIES: { id: RoleType; body: string }[] = [
+  { id: 'horse_owner', body: 'Bir ya da daha fazla atım var' },
+  { id: 'rider', body: 'Biniyorum, yarışıyorum' },
+  { id: 'trainer', body: 'At ve binici eğitiyorum' },
+  { id: 'instructor', body: 'Ders veriyorum' },
+  { id: 'breeder', body: 'Damızlık ve tay yetiştiriyorum' },
+  { id: 'veterinarian', body: 'Sağlık hizmeti veriyorum' },
+  { id: 'farrier', body: 'Nal ve tırnak bakımı' },
+  { id: 'groom', body: 'Günlük bakım ve ahır işleri' },
+  { id: 'transporter', body: 'At taşıyorum' },
+  { id: 'equine_therapist', body: 'Fizyoterapi ve rehabilitasyon' },
+  { id: 'ranch_manager', body: 'Ahır, tesis ya da kulüp' },
+  { id: 'agent', body: 'Alım satımda temsil ediyorum' },
 ];
+
+/**
+ * The label comes from shared-types so the web's public profile and this
+ * picker cannot end up calling the same role two different things.
+ */
+export const ROLE_OPTIONS: { id: RoleType; label: string; body: string }[] = ROLE_BODIES.map(
+  (entry) => ({ ...entry, label: ROLE_LABEL_TR[entry.id] ?? entry.id }),
+);
 
 /** §7's health record types, in the order §18.2 S12 lists them. */
 export const HEALTH_TYPES: { id: HealthRecordType; label: string }[] = [

@@ -10,13 +10,19 @@ import { readSession } from '@/lib/session';
  * acquisition channel, and an acquisition channel a visitor cannot navigate is
  * a single page with orphans behind it.
  *
- * Deliberately flat. §19.1 names four public sections and the policy pages;
- * anything requiring a session lives in the app (§18.2), so there is no
- * account menu here to imply otherwise.
+ * Deliberately flat: every public section, and nothing that needs a session —
+ * the signed-in screens hang off "Hesabım" rather than crowding the bar.
+ *
+ * "Ekipman" sits second because it is the half of the market that is not a
+ * horse: fencing, feed, rugs, trailers, boots. Most of what actually changes
+ * hands in a yard is an object, and burying it under a menu makes the site
+ * look like it only sells animals.
  */
 const SECTIONS = [
   { href: '/tr/atlar', label: 'Satılık atlar' },
+  { href: '/tr/urunler', label: 'Ekipman' },
   { href: '/tr/hizmetler', label: 'Hizmetler' },
+  { href: '/tr/uzmanlar', label: 'Uzmanlar' },
   { href: '/tr/isler', label: 'İşler' },
   { href: '/tr/fiyatlandirma', label: 'Fiyatlandırma' },
 ];

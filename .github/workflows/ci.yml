@@ -98,6 +98,97 @@ jobs:
           # A listing detail page proves the demo dataset still renders through
           # the real page rather than erroring into an empty file.
           ls apps/web/out/tr/atlar/*/index.html >/dev/null
+          # The equipment marketplace is the other half of §13 and exports the
+          # same way; a page missing here means a filter route silently stopped
+          # being exportable.
+          ls apps/web/out/tr/urunler/*/index.html >/dev/null
+          ls apps/web/out/tr/profil/*/index.html >/dev/null
+
+  # The web app, against a real API.
+  #
+  # `pnpm build` proves it compiles, and the static export proves the public
+  # pages render on committed data. Neither touches the signed-in half — the
+  # cookie session, the server actions, the RLS-scoped reads — and neither
+  # would notice a page that answers 500 the moment it has to ask the API a
+  # question. So this stands the whole stack up and walks every route.
+  web:
+    name: Web (against a live API)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: only_horses
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/only_horses
+      DATABASE_URL: postgresql://only_horses_app@localhost:5432/only_horses
+      DB_URL: postgresql://postgres:postgres@localhost:5432/only_horses
+      PGPASSWORD: postgres
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      # Not a secret: a throwaway signing key for a database that exists for
+      # the length of this job. Nothing signed with it leaves the runner.
+      JWT_SECRET: ci-only-throwaway-signing-key-not-a-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: pnpm --filter @only-horses/shared-types build
+      - run: pnpm --filter @only-horses/demo-content build
+      # `--seed` loads §7's reference tables. Without them there are no breeds
+      # and no product categories, and half the forms render an empty select.
+      - name: Migrate and seed the reference data
+        run: node scripts/migrate.mjs --seed
+
+      - name: Build and start the API
+        run: |
+          pnpm --filter @only-horses/api build
+          pnpm --filter @only-horses/api start &
+          npx --yes wait-on http://localhost:3001/v1/reference/breeds --timeout 90000
+
+      - name: Build and start the web app
+        run: |
+          pnpm --filter @only-horses/web build
+          # `output: 'standalone'` writes a server but not the assets it
+          # serves — .next/static has to be copied in beside it, or every page
+          # renders unstyled and every check that reads a colour is measuring
+          # the wrong thing. (There is no public/ in this app.)
+          cp -r apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
+          node apps/web/.next/standalone/apps/web/server.js &
+          npx --yes wait-on http://localhost:3000/tr/atlar --timeout 90000
+
+      - name: Install Chromium for Playwright
+        run: npx --yes playwright@1.49.1 install --with-deps chromium
+
+      # The signed-in journey: register in the browser, record a horse, add to
+      # its history, list it, sell a saddle beside it, answer a message. This
+      # is the only check that holds a session at all.
+      - name: The authenticated journey
+        run: node scripts/web-account.mjs
+
+      # Every route, rendered. A 500 from a page that only fails once it has
+      # data is invisible to every other job here.
+      - name: Every route renders
+        run: node scripts/web-shot.mjs artifacts/web-shots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-shots
+          path: artifacts/web-shots
+          if-no-files-found: ignore
 
   # The mobile app is the half of the product that cannot be run here — no
   # simulator, no device. What it does have is Expo's web target: the same

@@ -87,3 +87,28 @@ export function HorseTimeline({ entries }: { entries: TimelineEntry[] }) {
 
 /** Exported so the mobile timeline can assert it renders the same ordering. */
 export const TIMELINE_ACCENT = tokens.colors.gold;
+
+/**
+ * §12's timeline row, as this component's entry.
+ *
+ * The API returns `referenceId` — the id of the health record, competition or
+ * listing the row came from — and `detail` as `null` rather than absent. Both
+ * pages that render a timeline need the same conversion, and two copies of it
+ * is two chances for one of them to key rows by index and lose React's
+ * identity across a refresh.
+ */
+export function toTimelineEntry(entry: {
+  kind: string;
+  date: string;
+  title: string;
+  detail: string | null;
+  referenceId: string | null;
+}): TimelineEntry {
+  return {
+    id: entry.referenceId ?? `${entry.kind}-${entry.date}`,
+    kind: entry.kind as TimelineEntryKind,
+    date: entry.date,
+    title: entry.title,
+    detail: entry.detail ?? undefined,
+  };
+}

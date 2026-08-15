@@ -63,15 +63,23 @@ Other known gaps, stated plainly:
 - The Stripe adapter has never been run either (ADR-0007) and needs one pass
   against Stripe test mode before launch.
 
-What does exist and is verified: the API (139 routes), the database and its
-RLS, the business rules, the mobile app's screens and flows, and the web app — the marketing pages, the
-listing/service/job indexes and detail pages, pricing, the policy pages, and
-signed-in screens for your account, horses, listings and messages. Session
+What does exist and is verified: the API, the database and its RLS, the
+business rules, the mobile app's screens and flows, and the web app — the
+marketing pages, the horse/equipment/service/job indexes and detail pages,
+public profiles, the professionals directory, pricing, the policy pages, and
+signed-in screens for your account, horses, listings, products, saved items,
+saved searches, notifications, verification, settings and messages. Session
 tokens are httpOnly cookies, so no token is reachable from script.
 
-The signed-in web screens cover the §18.2 flows that are pure management.
-Creating a horse, uploading media and composing a listing are still API-only —
-those forms exist in no client.
+The two clients now cover the same §18.2 flows: recording a horse, its health
+log and competition results, §6's ownership transfer, composing a listing,
+and the equipment marketplace all exist on both. One thing does not — uploading
+photos is mobile-only, because the web has no upload widget yet; the horse
+record says so rather than showing a control that does nothing.
+
+`scripts/web-account.mjs` walks the signed-in journey in a browser (16 steps)
+and `scripts/web-shot.mjs` renders all 34 routes against a live API; both run
+in CI.
 
 ## Stack
 
@@ -90,7 +98,8 @@ PostHog, Sentry, Cloudflare Images.
 
 ```
 apps/api          NestJS — owns all business logic (spec §4)
-apps/web          Next.js App Router — SSR listing pages for SEO (§19)
+apps/web          Next.js App Router — SSR listing pages for SEO (§19), plus
+                  the signed-in screens
 apps/admin        empty — §22's console has not been started
 apps/mobile       Expo Router (ADR-0002) — §18.2's screens; see "known gaps"
 packages/

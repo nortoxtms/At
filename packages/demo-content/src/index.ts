@@ -2,6 +2,7 @@ export * from './reference.js';
 export * from './products.js';
 export type { ReferenceItem } from './types.js';
 
+import { DEMO_PRODUCTS } from './products.js';
 import type {
   JobSearchHit,
   ListingDetail,
@@ -1498,3 +1499,87 @@ export const DEMO_LISTING_TYPES = Array.from(
 export const DEMO_REGIONS = Array.from(
   new Set(DEMO_LISTINGS.map((listing) => listing.region).filter(Boolean) as string[]),
 ).sort();
+
+/**
+ * The sellers behind the demo, as public profiles.
+ *
+ * Derived rather than exported: every field here already appears on a listing
+ * or a product in this file, so the preview's profile page shows the same
+ * placeholder yards the rest of the preview does and no additional claim about
+ * anyone is invented. Without it the seller link on every listing and product
+ * card in the preview is a 404 — which is how the last version of this page
+ * ended up not existing at all.
+ *
+ * What is missing is what the demo genuinely does not carry: bios, roles,
+ * review counts and response times belong to the profile endpoint, not to a
+ * search hit, so they are null and the page renders its "—" rather than a
+ * number nobody measured.
+ */
+export interface DemoProfile {
+  id: string;
+  handle: string;
+  displayName: string;
+  bio: string | null;
+  city: string | null;
+  region: string | null;
+  verificationLevel: string;
+  trustScore: number;
+  responseRate: number | null;
+  responseTimeMins: number | null;
+  reviewCount: number;
+  reviewAverage: number | null;
+  roles: { role: string }[];
+  trustChips: string[];
+  createdAt: string;
+}
+
+export const DEMO_PROFILES: Record<string, DemoProfile> = (() => {
+  const table: Record<string, DemoProfile> = {};
+
+  for (const listing of Object.values(DEMO_LISTING_DETAIL)) {
+    if (table[listing.seller_handle]) continue;
+
+    table[listing.seller_handle] = {
+      id: listing.seller_profile_id,
+      handle: listing.seller_handle,
+      displayName: listing.seller_name,
+      bio: null,
+      city: listing.city,
+      region: listing.region,
+      verificationLevel: listing.seller_verification,
+      trustScore: listing.seller_trust_score,
+      responseRate:
+        listing.seller_response_rate === null ? null : Number(listing.seller_response_rate),
+      responseTimeMins: null,
+      reviewCount: 0,
+      reviewAverage: null,
+      roles: [],
+      trustChips: [],
+      createdAt: listing.published_at ?? new Date(0).toISOString(),
+    };
+  }
+
+  for (const product of DEMO_PRODUCTS) {
+    if (table[product.sellerHandle]) continue;
+
+    table[product.sellerHandle] = {
+      id: product.id,
+      handle: product.sellerHandle,
+      displayName: product.sellerName,
+      bio: null,
+      city: product.city,
+      region: product.region,
+      verificationLevel: product.sellerVerification,
+      trustScore: product.sellerTrustScore,
+      responseRate: null,
+      responseTimeMins: null,
+      reviewCount: 0,
+      reviewAverage: null,
+      roles: [],
+      trustChips: [],
+      createdAt: product.publishedAt ?? new Date(0).toISOString(),
+    };
+  }
+
+  return table;
+})();

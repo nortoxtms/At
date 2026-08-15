@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { HorseTimeline, type TimelineEntry as UiTimelineEntry } from '@/components/HorseTimeline';
+import { HorseTimeline, toTimelineEntry } from '@/components/HorseTimeline';
 import { SafetyCard } from '@/components/SafetyCard';
 import {
   ageYears,
@@ -148,12 +148,11 @@ export default async function ListingPage({ params }: PageProps) {
             .filter(Boolean)
             .join(' · ')}
         </p>
-        {/*
-          There is no /tr/profil route — §19.1 lists no public profile page, and
-          the seller's own screens are in the app (§18.2). This linked to a 404;
-          naming the handle is what the page can honestly offer.
-        */}
-        <p className="text-small text-text-secondary mt-3">@{listing.seller_handle}</p>
+        <p className="text-small text-text-secondary mt-3">
+          <Link href={`/tr/profil/${listing.seller_handle}`} className="hover:text-gold-soft">
+            @{listing.seller_handle}
+          </Link>
+        </p>
       </section>
 
       {listing.description ? (
@@ -190,7 +189,7 @@ export default async function ListingPage({ params }: PageProps) {
             Kayıt, sağlık, yarışma ve sahiplik geçmişi — platformda tutulduğu haliyle.
           </p>
           <div className="max-w-xl">
-            <HorseTimeline entries={timeline.map(toUiEntry)} />
+            <HorseTimeline entries={timeline.map(toTimelineEntry)} />
           </div>
         </section>
       ) : null}
@@ -214,21 +213,6 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function toUiEntry(entry: {
-  kind: string;
-  date: string;
-  title: string;
-  detail: string | null;
-  referenceId: string | null;
-}): UiTimelineEntry {
-  return {
-    id: entry.referenceId ?? `${entry.kind}-${entry.date}`,
-    kind: entry.kind as UiTimelineEntry['kind'],
-    date: entry.date,
-    title: entry.title,
-    detail: entry.detail ?? undefined,
-  };
-}
 
 /**
  * §19.2: `Product` + `Offer`.

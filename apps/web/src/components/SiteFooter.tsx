@@ -36,8 +36,18 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/tr/urunler" className="hover:text-gold-soft">
+                  Ekipman ve malzeme
+                </Link>
+              </li>
+              <li>
                 <Link href="/tr/hizmetler" className="hover:text-gold-soft">
                   Hizmetler
+                </Link>
+              </li>
+              <li>
+                <Link href="/tr/uzmanlar" className="hover:text-gold-soft">
+                  Uzmanlar
                 </Link>
               </li>
               <li>

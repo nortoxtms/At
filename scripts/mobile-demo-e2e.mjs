@@ -144,6 +144,11 @@ await step('a health record schedules its reminder', async () => {
   await tap('Kaydet');
   await page.waitForTimeout(2500);
   await expectScreen('Tetanoz aşısı');
+  // Not just the title. §12 answers this endpoint in camelCase while most of
+  // the list endpoints are snake_cased, and reading it wrong renders every
+  // entry with a blank date and no reminder at all — a log that looks fine
+  // until you notice none of it says when.
+  await expectScreen('Sıradaki ·');
 });
 
 let listingSlug = null;

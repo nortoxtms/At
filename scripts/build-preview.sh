@@ -40,7 +40,7 @@ rm -rf "$WORK/web/node_modules" "$WORK/web/.next" "$WORK/web/out"
 # marketplace where you could read the terms of service and not look at a
 # horse), swap in the preview variants from src/preview/routes. They render
 # the committed demo dataset and filter it in the browser.
-for ROUTE in atlar hizmetler isler; do
+for ROUTE in atlar urunler hizmetler isler uzmanlar; do
   cp "$WORK/web/src/preview/routes/$ROUTE/page.tsx" "$WORK/web/src/app/[locale]/$ROUTE/page.tsx"
 done
 
@@ -67,8 +67,42 @@ export function generateStaticParams() {
 }
 PARAMS
 
-# Detail routes with no demo data behind them would export as empty pages.
+# The product detail page needs no rewrite either — lib/api.ts serves it from
+# the exported catalogue under NEXT_PUBLIC_STATIC_PREVIEW — only a list of
+# slugs to emit.
+cat >> "$WORK/web/src/app/[locale]/urunler/[slug]/page.tsx" <<'PARAMS'
+
+// Appended by scripts/build-preview.sh — static export only.
+import { DEMO_PRODUCTS as PREVIEW_PRODUCTS } from '@only-horses/demo-content';
+
+export function generateStaticParams() {
+  return PREVIEW_PRODUCTS.flatMap((product) => [
+    { locale: 'tr', slug: product.slug },
+    { locale: 'en', slug: product.slug },
+  ]);
+}
+PARAMS
+
+# Detail routes with no demo data behind them would export as empty pages. The
+# public profile is one: the demo carries listings and products, not the people
+# behind them, and a profile page for a placeholder yard is a page about nobody.
 rm -rf "$WORK/web/src/app/[locale]/hizmetler/[slug]" "$WORK/web/src/app/[locale]/isler/[slug]"
+
+# The public profile does have demo data behind it — DEMO_PROFILES is derived
+# from the sellers already in the dataset — so it exports, and the seller link
+# on every listing and product card goes somewhere.
+cat >> "$WORK/web/src/app/[locale]/profil/[handle]/page.tsx" <<'PARAMS'
+
+// Appended by scripts/build-preview.sh — static export only.
+import { DEMO_PROFILES as PREVIEW_PROFILES } from '@only-horses/demo-content';
+
+export function generateStaticParams() {
+  return Object.keys(PREVIEW_PROFILES).flatMap((handle) => [
+    { locale: 'tr', handle },
+    { locale: 'en', handle },
+  ]);
+}
+PARAMS
 
 # The signed-in screens need a server: they read an httpOnly cookie, call the
 # API as that person and redirect when there is no session. A static export has

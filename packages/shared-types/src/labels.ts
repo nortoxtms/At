@@ -102,3 +102,29 @@ export const DISCIPLINE_LABEL_TR: Record<string, string> = {
   cirit: 'Cirit',
   rahvan: 'Rahvan',
 };
+
+/**
+ * §3.1's roles, in Turkish.
+ *
+ * Here rather than in the mobile app because the web renders the same roles on
+ * a public profile and in the professionals directory. Two copies of an enum's
+ * labels are two translations, free to drift the moment one is edited — and
+ * the drift shows up as the same person being a "Nalbant" on one screen and a
+ * "Farrier" on the other.
+ */
+export const ROLE_LABEL_TR: Record<string, string> = {
+  horse_owner: 'At sahibi',
+  rider: 'Binici',
+  trainer: 'Eğitmen',
+  instructor: 'Antrenör',
+  breeder: 'Yetiştirici',
+  veterinarian: 'Veteriner',
+  farrier: 'Nalbant',
+  groom: 'Seyis',
+  transporter: 'Nakliyeci',
+  equine_therapist: 'Terapist',
+  ranch_manager: 'İşletme yöneticisi',
+  photographer: 'Fotoğrafçı',
+  saddler: 'Saraciye ustası',
+  agent: 'Aracı',
+};

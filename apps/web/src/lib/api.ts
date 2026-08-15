@@ -2,6 +2,8 @@ import { SALARY_PERIOD_LABEL_TR } from '@only-horses/shared-types';
 import type {
   JobSearchHit,
   ListingDetail,
+  ProductDetail,
+  ProductSearchHit,
   PlanFeature,
   PlanOption,
   ListingSearchHit,
@@ -108,6 +110,82 @@ export async function getTimeline(listingId: string): Promise<TimelineEntry[] | 
   // already handles an absent timeline, so it renders without one.
   if (IS_STATIC_PREVIEW) return null;
   return get<TimelineEntry[]>(`/horses/${listingId}/timeline`, 300);
+}
+
+/**
+ * The product marketplace (§13, extended).
+ *
+ * Server-rendered like the horse listings and for the same §19.2 reason: a
+ * person searching "wintec eyer" is searching Google, not this site, and a
+ * client-rendered grid is a page Googlebot sees as empty.
+ */
+export async function searchProducts(
+  params: Record<string, string | number | undefined>,
+): Promise<{ hits: ProductSearchHit[]; total: number }> {
+  if (IS_STATIC_PREVIEW) {
+    const { DEMO_PRODUCTS } = await demo();
+    const needle = String(params.q ?? '').trim().toLocaleLowerCase('tr');
+    const category = params.category ? String(params.category) : null;
+
+    const hits = DEMO_PRODUCTS.filter((product) => {
+      if (category && product.category !== category && product.parentCategory !== category) {
+        return false;
+      }
+      if (!needle) return true;
+      return [product.title, product.brand, product.model, product.categoryName, product.city]
+        .filter(Boolean)
+        .some((field) => String(field).toLocaleLowerCase('tr').includes(needle));
+    });
+
+    return { hits, total: hits.length };
+  }
+
+  return search<ProductSearchHit>('/products/search', params);
+}
+
+export async function getProduct(slug: string): Promise<ProductDetail | null> {
+  if (IS_STATIC_PREVIEW) {
+    const { DEMO_PRODUCTS } = await demo();
+    const hit = DEMO_PRODUCTS.find((product) => product.slug === slug);
+    if (!hit) return null;
+
+    return {
+      ...hit,
+      description:
+        'Bu ürün, önizlemenin örnek verisinden geliyor. Canlı sürümde satıcıya buradan yazılır.',
+      shippingNote: null,
+      color: null,
+      status: 'active',
+      viewCount: 0,
+      sellerProfileId: '',
+      images: [],
+    };
+  }
+
+  return get<ProductDetail>(`/products/${encodeURIComponent(slug)}`, 300);
+}
+
+export async function getProductCategories(): Promise<ProductCategoryRow[]> {
+  if (IS_STATIC_PREVIEW) {
+    const { DEMO_PRODUCT_CATEGORIES } = await demo();
+    return DEMO_PRODUCT_CATEGORIES.map((entry) => ({
+      code: entry.code,
+      parent_code: entry.parentCode,
+      name_tr: entry.name,
+      icon: null,
+      active_count: entry.activeCount,
+    }));
+  }
+
+  return (await get<ProductCategoryRow[]>('/products/categories', 3600)) ?? [];
+}
+
+export interface ProductCategoryRow {
+  code: string;
+  parent_code: string | null;
+  name_tr: string;
+  icon: string | null;
+  active_count: string | number;
 }
 
 export async function searchListings(
@@ -350,4 +428,66 @@ export interface PlanCatalogue {
  */
 export function getPlans(): Promise<PlanCatalogue | null> {
   return get<PlanCatalogue>('/billing/plans', 3600);
+}
+
+/**
+ * §7's reference tables — breeds and disciplines.
+ *
+ * Cached for an hour because these change with a migration, not with a
+ * session, and served from the bundled copies whenever the API does not
+ * answer: a horse wizard whose breed picker is empty is a wizard nobody can
+ * finish, and "unreachable" is a worse answer there than "slightly stale".
+ *
+ * The same fallback the mobile app uses, from the same package, so the two
+ * platforms cannot end up offering different breed lists.
+ */
+export interface ReferenceRow {
+  code: string;
+  name: string;
+}
+
+export async function getBreeds(): Promise<ReferenceRow[]> {
+  const live = IS_STATIC_PREVIEW ? null : await get<ReferenceRow[]>('/reference/breeds', 3600);
+  if (live && live.length > 0) return live;
+
+  return (await demo()).DEMO_BREEDS.map((entry) => ({ code: entry.code, name: entry.name }));
+}
+
+export async function getDisciplines(): Promise<ReferenceRow[]> {
+  const live = IS_STATIC_PREVIEW
+    ? null
+    : await get<ReferenceRow[]>('/reference/disciplines', 3600);
+  if (live && live.length > 0) return live;
+
+  return (await demo()).DEMO_DISCIPLINES.map((entry) => ({ code: entry.code, name: entry.name }));
+}
+
+/**
+ * §18.2 S23 — a public profile by handle.
+ *
+ * Public and cacheable: this is one of the few signed-out pages a buyer
+ * reaches by searching a name, so it goes through the ISR `get` rather than
+ * the signed-in `apiAs`.
+ */
+export interface PublicProfile {
+  id: string;
+  handle: string;
+  displayName: string;
+  bio: string | null;
+  city: string | null;
+  region: string | null;
+  verificationLevel: string;
+  trustScore: number;
+  responseRate: number | null;
+  responseTimeMins: number | null;
+  reviewCount: number | string;
+  reviewAverage: number | string | null;
+  roles: { role: string }[];
+  trustChips: string[];
+  createdAt: string;
+}
+
+export async function getProfile(handle: string): Promise<PublicProfile | null> {
+  if (IS_STATIC_PREVIEW) return (await demo()).DEMO_PROFILES[handle] ?? null;
+  return get<PublicProfile>(`/profiles/${encodeURIComponent(handle)}`, 300);
 }

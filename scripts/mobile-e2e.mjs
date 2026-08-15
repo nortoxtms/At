@@ -197,6 +197,19 @@ if (registered) {
     await tap('Sağlık kaydı');
     await page.waitForTimeout(2500);
     await expectScreen('sağlık kaydı varsayılan olarak gizlidir');
+
+    // A record, entered and read back, with its date. §12 answers this
+    // endpoint in camelCase while most list endpoints are snake_cased, and
+    // reading it wrong renders a log where nothing says when — which is the
+    // one thing a health log is for.
+    await tap('Kayıt ekle');
+    await page.waitForTimeout(2000);
+    await byLabel('Başlık').fill('Grip aşısı');
+    await tap('1 yıl');
+    await tap('Kaydet');
+    await page.waitForTimeout(3000);
+    await expectScreen('Grip aşısı');
+    await expectScreen('Sıradaki ·');
   });
 
   await step('uploading a photo attaches it to the horse', async () => {

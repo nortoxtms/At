@@ -46,6 +46,13 @@ export default async function MyHorsesPage() {
         </Link>
       </header>
 
+      <Link
+        href="/tr/hesap/atlarim/yeni"
+        className="mb-6 inline-block rounded-md bg-gold-soft px-5 py-2 text-small font-medium text-text-on-gold"
+      >
+        At ekle
+      </Link>
+
       {horses.length === 0 ? (
         // §20.7: an empty state names the next action.
         <div className="rounded-lg border border-border bg-surface p-10 text-center">
@@ -60,7 +67,11 @@ export default async function MyHorsesPage() {
           {horses.map((horse) => (
             <li key={horse.id} className="rounded-lg border border-border bg-surface p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="font-display text-h3">{horse.name}</h2>
+                <h2 className="font-display text-h3">
+                  <Link href={`/tr/hesap/atlarim/${horse.id}`} className="hover:text-gold-soft">
+                    {horse.name}
+                  </Link>
+                </h2>
                 <span className="text-caption text-text-secondary">
                   {horse.activeListingId ? 'İlanda' : 'İlanda değil'}
                 </span>
@@ -83,6 +94,24 @@ export default async function MyHorsesPage() {
                   ? ` · sıradaki: ${horse.nextDueTitle ?? 'bakım'} (${horse.nextDueOn})`
                   : ''}
               </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {[
+                  ['Kayda git', `/tr/hesap/atlarim/${horse.id}`],
+                  ['Sağlık', `/tr/hesap/atlarim/${horse.id}/saglik`],
+                  ...(horse.activeListingId
+                    ? []
+                    : ([['İlan ver', `/tr/hesap/ilan-ver?horse=${horse.id}`]] as [string, string][])),
+                ].map(([label, href]) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="rounded-md border border-border px-4 py-2 text-small hover:bg-surface-raised/60"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
             </li>
           ))}
         </ul>

@@ -20,8 +20,13 @@ BASE_PATH="${PAGES_BASE_PATH:-}"
 
 say() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 
-say "1. Building shared-types"
-pnpm --filter @only-horses/shared-types build
+say "1. Building the packages the web app depends on"
+# `^...` is "everything web depends on, but not web itself", resolved from the
+# workspace graph rather than named here. Naming them was the bug: adding
+# @only-horses/demo-content did not add it to this line, the package had no
+# dist in CI, and the Pages build failed on four unresolved imports while
+# `pnpm build` locally was green because dist happened to exist on disk.
+pnpm --filter "@only-horses/web^..." build
 
 say "2. Removing the API-backed routes from a scratch copy"
 WORK="$(mktemp -d)"
@@ -115,9 +120,15 @@ if [ -z "$EXPORTED" ]; then
   exit 1
 fi
 
-rm -rf "$OUT"
-mkdir -p "$(dirname "$OUT")"
-cp -r "$EXPORTED" "$OUT"
+# When Next wrote the export straight into `out/`, it is already where it
+# needs to be — and `rm -rf "$OUT"` would delete the very directory the next
+# line copies from. That is a self-destruct that only fires on the code path
+# where everything went right.
+if [ "$EXPORTED" != "$OUT" ]; then
+  rm -rf "$OUT"
+  mkdir -p "$(dirname "$OUT")"
+  cp -r "$EXPORTED" "$OUT"
+fi
 
 # Jekyll would otherwise swallow Next's _next/ directory on Pages.
 touch "$OUT/.nojekyll"

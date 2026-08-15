@@ -14,12 +14,13 @@ on:
     branches: [claude/only-horses-full-spec-ech40x]
     paths:
       - 'apps/web/**'
-      - 'packages/shared-types/**'
-      # The design tokens and the Tailwind preset live here (§20.1), so a
-      # palette or type-scale change is a change to every published page. It
-      # was missing from this list, which meant exactly those changes were the
-      # ones that would not republish.
-      - 'packages/config/**'
+      # Every workspace package, not a list of the ones that mattered when this
+      # was written. The design tokens and the Tailwind preset are here (§20.1)
+      # so a palette change is a change to every published page; the demo
+      # dataset is here too, and is the entire content of the preview. A
+      # curated list means the changes that do not republish are exactly the
+      # ones somebody forgot to add.
+      - 'packages/**'
       - 'scripts/build-preview.sh'
       - '.github/workflows/pages.yml'
   workflow_dispatch:

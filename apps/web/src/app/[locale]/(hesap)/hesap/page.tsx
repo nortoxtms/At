@@ -182,6 +182,7 @@ export default async function AccountPage() {
             ['Atlarım', '/tr/hesap/atlarim'],
             ['İlanlarım', '/tr/hesap/ilanlarim'],
             ['Ürünlerim', '/tr/hesap/urunlerim'],
+            ['Siparişlerim', '/tr/hesap/siparislerim'],
             ['Mesajlarım', '/tr/hesap/mesajlar'],
             ['Kaydedilenler', '/tr/hesap/kaydedilenler'],
             ['Aramalarım', '/tr/hesap/aramalarim'],

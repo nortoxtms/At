@@ -58,8 +58,26 @@ async function main() {
     await page.fill('input[name=displayName]', 'Hesap Turu');
     await page.fill('input[name=email]', email);
     await page.fill('input[name=password]', 'guclu-sifre-123');
-    await page.click('button[type=submit]');
-    await page.waitForURL('**/tr/hesap', { timeout: 20_000 });
+
+    // The same §12 rate limit `registerApi` waits out applies to the form, and
+    // it is the run's own earlier accounts that trip it. Retrying here rather
+    // than failing keeps a green run from depending on how long ago the last
+    // one finished.
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await page.click('button[type=submit]');
+      try {
+        await page.waitForURL('**/tr/hesap', { timeout: 15_000 });
+        break;
+      } catch {
+        const shown = await page.locator('main').innerText();
+        const wait = Number(/(\d+) saniye/.exec(shown)?.[1] ?? 0);
+        if (!wait) fail(`registration did not land on the account page: ${shown.slice(0, 200)}`);
+        console.log(`  \x1b[2m· rate limited, waiting ${wait + 2}s\x1b[0m`);
+        await new Promise((resolve) => setTimeout(resolve, (wait + 2) * 1000));
+      }
+    }
+
+    if (!page.url().includes('/tr/hesap')) fail('registration never completed');
     pass(`registered and landed on the account page as ${email}`);
 
     console.log(bold('3. §12 — the session token is not reachable from script'));
@@ -314,7 +332,118 @@ async function main() {
     if (!detail.includes('Elden teslim veya kargo')) fail('the delivery terms are missing');
     pass('the detail page carries brand, size and delivery terms');
 
-    console.log(bold('13. §10 / §21 — saved items, saved searches and notifications render'));
+    console.log(bold('13. Buying a product — order, seller confirms, pay, ship, receive'));
+
+    // Bought from a seeded seller, and explicitly not from this account.
+    //
+    // Filtering only on price and delivery was not enough: every previous run
+    // of this script leaves a published product behind, those sort to the top
+    // of search, and the buyer ended up ordering their own listing — which the
+    // API refuses, leaving the form sitting there until the wait timed out
+    // with no clue why.
+    await page.goto(`${WEB}/tr/hesap`, { waitUntil: 'networkidle' });
+    const myHandle = (await page.locator('main').innerText()).match(/@([a-z0-9-]+)/i)?.[1] ?? '';
+
+    const forSale = await fetch(`${API}/v1/products/search?limit=50`)
+      .then((response) => response.json())
+      .then((body) =>
+        (body?.data ?? []).find(
+          (product) =>
+            product.priceAmount &&
+            product.delivery !== 'pickup' &&
+            product.quantity > 0 &&
+            product.sellerHandle !== myHandle,
+        ),
+      )
+      .catch(() => null);
+
+    if (!forSale) fail('no shippable priced product in the catalogue to buy');
+
+    await page.goto(`${WEB}/tr/urunler/${forSale.slug}`, { waitUntil: 'networkidle' });
+    await page.click('a:has-text("Satın al")');
+    await page.waitForURL('**/hesap/satin-al/**', { timeout: 20_000 });
+
+    await page.fill('textarea[name=shipToLine1]', 'Test Sokak 5');
+    await page.fill('input[name=shipToCity]', 'Ankara');
+    await page.fill('input[name=shipToName]', 'Hesap Turu');
+    await page.click('button[type=submit]');
+    await page.waitForURL('**/hesap/siparislerim/**', { timeout: 20_000 });
+
+    const orderUrl = page.url();
+    const orderId = orderUrl.split('/siparislerim/')[1].split(/[?#]/)[0];
+
+    text = await page.locator('main').innerText();
+    if (!text.includes('Siparişin alındı')) fail('the order confirmation is not on the page');
+    // §5: the seller confirms before the money, so there must be no pay button.
+    if (text.includes('Ödemeyi tamamla')) {
+      fail('payment was offered before the seller accepted — §5 puts confirmation first');
+    }
+    pass('order placed, and payment is correctly not offered yet');
+
+    // The seller is a seeded account, so accepting happens through the API as
+    // them. Everything the *buyer* does stays in the browser.
+    const sellerToken = await tokenFor(forSale.sellerHandle);
+    if (!sellerToken) fail(`could not sign in as the seller @${forSale.sellerHandle}`);
+    await apiPost(`/orders/${orderId}/accept`, undefined, sellerToken);
+
+    await page.goto(orderUrl, { waitUntil: 'networkidle' });
+    text = await page.locator('main').innerText();
+    if (!text.includes('Ödeme')) fail('the payment step did not appear after the seller accepted');
+    if (!text.includes('simülasyon')) {
+      fail('the payment step does not say the provider is a simulation');
+    }
+    pass('once accepted, the payment step appears and is labelled a simulation');
+
+    // Waited on the URL rather than a fixed pause: paying is a server action
+    // that calls the provider, writes through a SECURITY DEFINER function and
+    // then redirects, and a blind 2.5s was sometimes short — which failed as
+    // "main not found" mid-navigation rather than as anything about payment.
+    await page.click('button:has-text("Ödemeyi tamamla")');
+    await page.waitForURL('**odendi=1', { timeout: 30_000 });
+    // Wait for the element, not for a duration. The URL changes before the
+    // RSC payload lands, so reading `main` straight after the navigation
+    // sometimes found no `main` at all — which failed as a locator timeout and
+    // said nothing about payment.
+    try {
+      await page.locator('main').waitFor({ state: 'visible', timeout: 20_000 });
+    } catch {
+      const dump = await page.evaluate(() => document.body.innerText);
+      fail(`no <main> at ${page.url()} — body: ${dump.slice(0, 400)}`);
+    }
+
+    text = await page.locator('main').innerText();
+    if (!text.includes('Ödeme tamamlandı')) fail('paying did not confirm');
+    pass('paid, and the confirmation offers the way back to the marketplace');
+
+    await apiPost(`/orders/${orderId}/ship`, { trackingNote: 'Yurtiçi 999' }, sellerToken);
+    await page.goto(orderUrl, { waitUntil: 'networkidle' });
+    await page.click('button:has-text("Teslim aldım")');
+    await page.waitForTimeout(3000);
+
+    if (!(await page.locator('main').innerText()).includes('Tamamlandı')) {
+      fail('confirming receipt did not complete the order');
+    }
+    pass('buyer confirmed receipt and the order completed');
+
+    console.log(bold('14. §11 — the sale moved the stock'));
+    const after = await fetch(`${API}/v1/products/${forSale.slug}`)
+      .then((response) => response.json())
+      .then((body) => body?.data ?? null)
+      .catch(() => null);
+
+    if (after && after.quantity !== forSale.quantity - 1) {
+      fail(`stock did not move: ${forSale.quantity} → ${after.quantity}`);
+    }
+    pass(`stock ${forSale.quantity} → ${forSale.quantity - 1}`);
+
+    console.log(bold('15. Both sides see the order'));
+    await page.goto(`${WEB}/tr/hesap/siparislerim?side=buyer`, { waitUntil: 'networkidle' });
+    if (!(await page.locator('main').innerText()).includes('OH-')) {
+      fail('the order is not in the buyer\'s list');
+    }
+    pass('it is in "Aldıklarım"');
+
+    console.log(bold('16. §10 / §21 — saved items, saved searches and notifications render'));
     for (const [path, heading] of [
       ['/tr/hesap/kaydedilenler', 'Kaydedilenler'],
       ['/tr/hesap/aramalarim', 'Aramalarım'],
@@ -331,7 +460,7 @@ async function main() {
     }
     pass('all five render, with content rather than a blank panel');
 
-    console.log(bold('14. §18.2 S23 — the seller’s public profile is reachable and public'));
+    console.log(bold('17. §18.2 S23 — the seller’s public profile is reachable and public'));
     // Read the handle off the account page rather than from the API. The
     // session is an httpOnly cookie held by *this* server, so a fetch from the
     // page carries no bearer token and /v1/me answers 401 — which is the whole
@@ -357,7 +486,7 @@ async function main() {
     await anon.close();
     pass(`@${handle} renders signed out, with its verification level`);
 
-    console.log(bold('15. §18.2 S21/S22 — a conversation, read and answered'));
+    console.log(bold('18. §18.2 S21/S22 — a conversation, read and answered'));
     const buyerToken = await registerApi(`buyer-${STAMP}`);
     const conversation = await apiPost(
       '/conversations',
@@ -386,7 +515,7 @@ async function main() {
     if (!thread.includes('Deneme binişi')) fail('the reply is not in the thread');
     pass('the reply was sent and is in the thread');
 
-    console.log(bold('16. Sign out'));
+    console.log(bold('19. Sign out'));
     await page.goto(`${WEB}/tr/hesap`, { waitUntil: 'networkidle' });
     await page.click('button:has-text("Çıkış yap")');
     await page.waitForURL('**/tr/giris', { timeout: 20_000 });
@@ -404,19 +533,70 @@ async function main() {
   }
 }
 
-async function registerApi(tag) {
-  const response = await fetch(`${API}/v1/auth/register`, {
+/**
+ * A token for a seeded account, by handle.
+ *
+ * The seed gives every account the same development password, so the seller
+ * side of a purchase can be driven without inventing a second browser session
+ * — the buyer's half stays in the browser, which is the half under test.
+ */
+async function tokenFor(handle) {
+  const { default: pg } = await import('pg');
+  const client = new pg.Client({ connectionString: DB });
+  let email = null;
+  await client.connect();
+  try {
+    const found = await client.query(
+      `SELECT u.email FROM auth.users u JOIN profiles p ON p.id = u.id WHERE p.handle = $1`,
+      [handle],
+    );
+    email = found.rows[0]?.email ?? null;
+  } finally {
+    await client.end();
+  }
+
+  if (!email) return null;
+
+  const response = await fetch(`${API}/v1/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      email: `${tag}@example.com`,
-      password: 'guclu-sifre-123',
-      displayName: `Fixture ${tag}`,
-    }),
+    body: JSON.stringify({ email, password: 'guclu-sifre-123' }),
   });
-  const body = await response.json();
-  if (!body?.data) throw new Error(`register failed: ${JSON.stringify(body).slice(0, 200)}`);
-  return body.data.tokens.accessToken;
+  const body = await response.json().catch(() => ({}));
+  return body?.data?.tokens?.accessToken ?? null;
+}
+
+/**
+ * Register a fixture account, waiting out §12's rate limit.
+ *
+ * This walk needs four accounts — the browser's, a verified fixture, a buyer
+ * and a third party — and four registrations trip the limit on their own. The
+ * first version simply failed when it did, which made a green run a matter of
+ * how recently anything else had signed up.
+ */
+async function registerApi(tag) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const response = await fetch(`${API}/v1/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: `${tag}@example.com`,
+        password: 'guclu-sifre-123',
+        displayName: `Fixture ${tag}`,
+      }),
+    });
+
+    const body = await response.json();
+    if (body?.data) return body.data.tokens.accessToken;
+
+    const wait = Number(body?.error?.details?.retryAfter ?? 0);
+    if (!wait) throw new Error(`register failed: ${JSON.stringify(body).slice(0, 200)}`);
+
+    console.log(`  \x1b[2m· rate limited, waiting ${wait + 2}s\x1b[0m`);
+    await new Promise((resolve) => setTimeout(resolve, (wait + 2) * 1000));
+  }
+
+  throw new Error(`register failed for ${tag} after 5 attempts`);
 }
 
 async function apiGet(path, token) {

@@ -195,6 +195,26 @@ export default async function ProductPage({ params }: Props) {
         <p className="text-body text-text-secondary whitespace-pre-line">{product.description}</p>
       </section>
 
+      {/*
+        Buying comes before writing, and only when there is a price to buy at.
+        A "fiyat sorunuz" listing keeps the message box and nothing else —
+        a checkout with no amount is a button that 400s.
+      */}
+      {product.priceAmount !== null && product.priceType !== 'on_request' ? (
+        <section className="mt-8 rounded-lg border border-gold-muted bg-surface p-5">
+          <h2 className="font-display text-h3">Bu ürünü al</h2>
+          <p className="text-small text-text-secondary mt-2">
+            Sipariş verdiğinde önce satıcı stoğu onaylar; ödeme ondan sonra alınır.
+          </p>
+          <Link
+            href={`/tr/hesap/satin-al/${product.slug}`}
+            className="mt-4 inline-block rounded-md bg-gold-soft px-6 py-3 text-body font-medium text-text-on-gold"
+          >
+            Satın al
+          </Link>
+        </section>
+      ) : null}
+
       <section className="mt-8 rounded-lg border border-border bg-surface p-5">
         <h2 className="font-display text-h3">Satıcıya yaz</h2>
         <p className="text-small text-text-secondary mt-2">

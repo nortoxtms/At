@@ -82,6 +82,17 @@ publishing a product each require `identity_verified`, and neither level is
 purchasable. Pausing and closing are never gated — a seller must always be
 able to take something down.
 
+Products can also be **bought**, which horses cannot: order → seller confirms →
+pay → ship → buyer confirms receipt, with stock decremented on payment and
+returned on refund. The horse side stays a classifieds board because §16.3
+says it must. The payment provider is a seam with only a local implementation
+— it authorises instantly and moves no money, and both clients label the step
+a simulation. A real marketplace processor needs seller onboarding and, in
+Türkiye, a licensed institution.
+
+`apps/api/scripts/seed-market.mjs` fills the marketplace: a product in all 28
+categories, 15 services and 5 jobs, through the real endpoints.
+
 `scripts/web-account.mjs` walks the signed-in journey in a browser (16 steps)
 and `scripts/web-shot.mjs` renders all 34 routes against a live API; both run
 in CI.

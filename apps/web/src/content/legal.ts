@@ -54,8 +54,9 @@ const TR: Record<string, LegalDocument> = {
     title: 'Kullanım Koşulları',
     updatedAt: UPDATED,
     summary:
-      'ONLY HORSES bir ilan ve tanışma platformudur. Alım satımın tarafı değildir, ' +
-      'ödemeye aracılık etmez ve komisyon almaz.',
+      'ONLY HORSES bir ilan ve tanışma platformudur. At alım satımının tarafı değildir, ' +
+      'ödemeye aracılık etmez ve komisyon almaz. Ekipman siparişleri platform ' +
+      'üzerinden verilir; ödeme altyapısı henüz devrede değildir.',
     sections: [
       {
         heading: '1. Platformun konumu',
@@ -66,6 +67,9 @@ const TR: Record<string, LegalDocument> = {
           'ONLY HORSES bir ilandaki fiyatı, atın sağlık durumunu, soy bilgisini veya bir ilan sahibinin ' +
             'beyanlarını doğrulanmış olarak sunmaz. "Kimliği doğrulanmış" rozeti yalnızca hesabın ' +
             'kimliğinin doğrulandığını gösterir; ilanın içeriğini doğrulamaz.',
+          'Ekipman ve malzeme siparişleri bunun istisnasıdır: sipariş platform üzerinden ' +
+            'oluşturulur ve durumu burada takip edilir. Ürünü satan yine kullanıcıdır; ' +
+            'ONLY HORSES ürünün ayıbından veya teslimatından sorumlu değildir.',
         ],
       },
       {
@@ -89,7 +93,22 @@ const TR: Record<string, LegalDocument> = {
         ],
       },
       {
-        heading: '4. Ücretler',
+        heading: '4. Ekipman siparişleri',
+        body: [
+          'Ekipman ve malzeme ilanlarında "Satın al" ile sipariş oluşturabilirsin. Sipariş önce ' +
+            'satıcının onayına düşer; satıcı stoğu onayladıktan sonra ödeme adımı açılır. ' +
+            'Onaylanmayan bir siparişten hiçbir bedel doğmaz.',
+          'Ödeme altyapısı henüz devrede değildir. Bu aşamada ödeme adımı yalnızca siparişi ' +
+            '"ödendi" olarak işaretler ve stoktan düşer; ONLY HORSES üzerinden para tahsil ' +
+            'edilmez. Bedelin nasıl ödeneceğini alıcı ve satıcı kendi aralarında belirler.',
+          'Sipariş, teslim alındığı alıcı tarafından onaylanana kadar iptal edilebilir. ' +
+            'İptal edilen bir siparişin adedi stoğa geri döner.',
+          'Ürünün durumu, ayıbı, teslimatı ve iadesi satıcı ile alıcı arasındadır. Anlaşmazlıkta ' +
+            'ONLY HORSES kayıtları taraflarla paylaşır, ancak hakem değildir.',
+        ],
+      },
+      {
+        heading: '5. Ücretler',
         body: [
           'Hesap açmak ve ilanlara bakmak ücretsizdir. Abonelikler, öne çıkarma ve iş ilanı ücretleri ' +
             'Fiyatlandırma sayfasında yayımlanır.',
@@ -98,7 +117,7 @@ const TR: Record<string, LegalDocument> = {
         ],
       },
       {
-        heading: '5. Değerlendirmeler',
+        heading: '6. Değerlendirmeler',
         body: [
           'Değerlendirme yazabilmek için karşı tarafla gerçekten yazışmış ya da bir devir işlemi ' +
             'tamamlamış olman gerekir. Değerlendirmeler, hakkında yazılan kişi tarafından silinemez; ' +
@@ -106,7 +125,7 @@ const TR: Record<string, LegalDocument> = {
         ],
       },
       {
-        heading: '6. Sorumluluğun sınırı',
+        heading: '7. Sorumluluğun sınırı',
         body: [
           'ONLY HORSES, kullanıcılar arasındaki anlaşmazlıklardan, atın durumundan veya ödemelerden ' +
             'sorumlu değildir. Platform "olduğu gibi" sunulur.',
@@ -114,7 +133,7 @@ const TR: Record<string, LegalDocument> = {
         ],
       },
       {
-        heading: '7. İletişim',
+        heading: '8. İletişim',
         body: [`Sorular için: ${OPERATOR.contact}`],
       },
     ],
@@ -368,8 +387,9 @@ const EN: Record<string, LegalDocument> = {
     title: 'Terms of Use',
     updatedAt: UPDATED,
     summary:
-      'ONLY HORSES is a listing and introduction platform. It is not a party to any sale, does not ' +
-      'process payments between users, and takes no commission.',
+      'ONLY HORSES is a listing and introduction platform. It is not a party to any horse sale, ' +
+      'does not process payments between users, and takes no commission. Equipment orders are ' +
+      'placed through the platform; payment processing is not live yet.',
     sections: [
       {
         heading: '1. What this platform is',
@@ -403,7 +423,22 @@ const EN: Record<string, LegalDocument> = {
         ],
       },
       {
-        heading: '4. Fees',
+        heading: '4. Equipment orders',
+        body: [
+          'Equipment listings can be ordered with "Satın al". An order goes to the seller first; ' +
+            'the payment step opens only once they confirm the stock. An order that is never ' +
+            'confirmed costs nothing.',
+          'Payment processing is not live. For now the payment step only marks the order paid and ' +
+            'decrements the stock; no money is collected through ONLY HORSES. How the amount is ' +
+            'settled is between buyer and seller.',
+          'An order can be cancelled until the buyer confirms receipt. A cancelled order returns ' +
+            'its quantity to the seller\'s stock.',
+          'Condition, defects, delivery and returns are between seller and buyer. In a dispute ' +
+            'ONLY HORSES will share its records with both parties, but is not an arbitrator.',
+        ],
+      },
+      {
+        heading: '5. Fees',
         body: [
           'Registering and browsing are free. Subscription, boost and job-post prices are published on ' +
             'the Pricing page.',
@@ -412,7 +447,7 @@ const EN: Record<string, LegalDocument> = {
         ],
       },
       {
-        heading: '5. Reviews',
+        heading: '6. Reviews',
         body: [
           'A review requires a real conversation with the other party or a completed transfer. The ' +
             'subject of a review cannot delete it; only moderators can hide one, and the reason is ' +
@@ -420,14 +455,14 @@ const EN: Record<string, LegalDocument> = {
         ],
       },
       {
-        heading: '6. Limitation of liability',
+        heading: '7. Limitation of liability',
         body: [
           'ONLY HORSES is not responsible for disputes between users, the condition of a horse, or ' +
             'payments. The platform is provided "as is".',
           'These terms are governed by the law of the Republic of Türkiye.',
         ],
       },
-      { heading: '7. Contact', body: [`Questions: ${OPERATOR.contact}`] },
+      { heading: '8. Contact', body: [`Questions: ${OPERATOR.contact}`] },
     ],
   },
 

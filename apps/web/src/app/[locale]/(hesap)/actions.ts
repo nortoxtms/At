@@ -41,8 +41,16 @@ async function authenticate(path: string, payload: unknown): Promise<AuthState |
     // §12 returns validation details as [{ field, message }]; surfacing them
     // next to the input is the difference between "check your details" and
     // knowing which one is wrong.
-    for (const detail of (body.error?.details as { field?: string; message?: string }[]) ?? []) {
-      if (detail?.field && detail.message) fields[detail.field] = detail.message;
+    //
+    // Guarded with isArray, because `details` is not always one: RATE_LIMITED
+    // carries `{ retryAfter }`, and iterating that threw "object is not
+    // iterable" — so a rate-limited signup crashed the page instead of showing
+    // the seconds to wait, which is the one message that would have helped.
+    const details = body.error?.details;
+    if (Array.isArray(details)) {
+      for (const detail of details as { field?: string; message?: string }[]) {
+        if (detail?.field && detail.message) fields[detail.field] = detail.message;
+      }
     }
 
     return {

@@ -326,6 +326,8 @@ async function main() {
     ['35-bildirimler', '/tr/hesap/bildirimler'],
     ['36-dogrulama', '/tr/hesap/dogrulama'],
     ['37-ayarlar', '/tr/hesap/ayarlar'],
+    ['38-siparislerim', '/tr/hesap/siparislerim'],
+    ['39-satin-al', `/tr/hesap/satin-al/${fixture.productSlug}`],
   ];
   for (const [name, path] of accountRoutes) await record(name, path);
 

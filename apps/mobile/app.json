@@ -16,7 +16,7 @@
     "android": {
       "package": "com.onlyhorses.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0E0C0A",
+        "backgroundColor": "#1A1610",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },

@@ -127,6 +127,39 @@ export interface DemoProduct {
   createdAt: string;
 }
 
+/**
+ * An order in the demo.
+ *
+ * The demo has one account, so an order needs a counterparty that is not the
+ * demo user: `side` records which end of it they are on, and the catalogue
+ * seller stands in for the other. Without that a demo buyer and a demo seller
+ * would be the same person and the API's "you cannot buy your own product"
+ * rule — a rule the real service enforces — could never be shown working.
+ */
+export interface DemoOrder {
+  id: string;
+  reference: string;
+  productId: string;
+  productSlug: string;
+  side: 'buyer' | 'seller';
+  counterpartyName: string;
+  counterpartyHandle: string;
+  quantity: number;
+  titleSnapshot: string;
+  unitPriceAmount: number;
+  totalAmount: number;
+  currency: string;
+  delivery: string;
+  status: string;
+  paymentStatus: string;
+  trackingNote: string | null;
+  cancelReason: string | null;
+  createdAt: string;
+  paidAt: string | null;
+  shippedAt: string | null;
+  completedAt: string | null;
+}
+
 export interface DemoMessage {
   id: string;
   conversationId: string;
@@ -196,6 +229,7 @@ export interface DemoState {
   competitions: DemoCompetition[];
   listings: DemoListing[];
   products: DemoProduct[];
+  orders: DemoOrder[];
   conversations: DemoConversation[];
   messages: DemoMessage[];
   saved: DemoSaved[];
@@ -295,6 +329,7 @@ function seed(): DemoState {
     ],
     listings: [],
     products: [],
+    orders: [],
     conversations: [
       {
         id: conversationId,

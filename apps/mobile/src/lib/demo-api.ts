@@ -10,6 +10,7 @@ import {
   type DemoConversation,
   type DemoHorse,
   type DemoListing,
+  type DemoOrder,
   type DemoProduct,
 } from '@/lib/demo-store';
 import { HEALTH_TYPES } from '@/lib/endpoints';
@@ -860,6 +861,223 @@ export async function demoRequest(
 
     await persist();
     return ok({ status: next });
+  }
+
+  // ── orders ──────────────────────────────────────────────────────────────
+  //
+  // The same lifecycle table and the same actor rules as OrdersService, and
+  // that duplication is deliberate: a demo that lets a buyer press "Kargoya
+  // verdim" teaches the shape of a product that does not exist. The stock
+  // arithmetic is here too, because "sold out" is one of the few states a
+  // demo can actually show somebody.
+
+  if (is('orders', 'mine') && method === 'GET') {
+    const side = query.get('side') === 'seller' ? 'seller' : 'buyer';
+
+    return ok(
+      state.orders
+        .filter((order) => order.side === side)
+        .map((order) => ({
+          id: order.id,
+          reference: order.reference,
+          status: order.status,
+          payment_status: order.paymentStatus,
+          quantity: order.quantity,
+          title_snapshot: order.titleSnapshot,
+          unit_price_amount: String(order.unitPriceAmount),
+          total_amount: String(order.totalAmount),
+          currency: order.currency,
+          delivery: order.delivery,
+          tracking_note: order.trackingNote,
+          created_at: order.createdAt,
+          paid_at: order.paidAt,
+          shipped_at: order.shippedAt,
+          completed_at: order.completedAt,
+          cancel_reason: order.cancelReason,
+          product_slug: order.productSlug,
+          counterparty_name: order.counterpartyName,
+          counterparty_handle: order.counterpartyHandle,
+        })),
+    );
+  }
+
+  if (is('orders') && method === 'POST') {
+    const product =
+      state.products.find((entry) => entry.id === payload.productId) ??
+      CATALOGUE.products.find((entry) => entry.id === payload.productId);
+
+    if (!product) return fail(404, 'NOT_FOUND', 'Ürün bulunamadı.');
+
+    const owned = state.products.some((entry) => entry.id === product.id);
+    // The rule the real service enforces with a CHECK constraint. In the demo
+    // the only listings the user owns are the ones they created here.
+    if (owned) return fail(400, 'VALIDATION_ERROR', 'Kendi ürününü satın alamazsın.');
+
+    const price = 'priceAmount' in product ? product.priceAmount : null;
+    if (price === null || price === undefined) {
+      return fail(
+        400,
+        'VALIDATION_ERROR',
+        'Bu ürün "fiyat sorunuz" olarak yayınlanmış. Satıcıya yazman gerekiyor.',
+      );
+    }
+
+    const wanted = Number(payload.quantity ?? 1) || 1;
+    const stock = 'quantity' in product ? Number(product.quantity ?? 1) : 1;
+    if (wanted > stock) return fail(400, 'VALIDATION_ERROR', 'Bu üründen istediğin adet kalmadı.');
+
+    const order: DemoOrder = {
+      id: nextId('order'),
+      reference: `OH-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
+      productId: product.id,
+      productSlug: product.slug,
+      side: 'buyer',
+      counterpartyName: 'sellerName' in product ? product.sellerName : 'Satıcı',
+      counterpartyHandle: 'sellerHandle' in product ? product.sellerHandle : 'satici',
+      quantity: wanted,
+      titleSnapshot: product.title,
+      unitPriceAmount: price,
+      totalAmount: price * wanted,
+      currency: 'priceCurrency' in product ? product.priceCurrency : 'TRY',
+      delivery: 'delivery' in product ? String(product.delivery) : 'shipping',
+      status: 'pending_seller',
+      paymentStatus: 'none',
+      trackingNote: null,
+      cancelReason: null,
+      createdAt: now(),
+      paidAt: null,
+      shippedAt: null,
+      completedAt: null,
+    };
+
+    state.orders.unshift(order);
+    notify('order_placed', 'Siparişin alındı', `${order.reference} — satıcı onayı bekleniyor.`, {
+      orderId: order.id,
+    });
+
+    // The demo has no second person to press "Onayla", so the catalogue seller
+    // answers on a timer the way `autoReply` answers a message. Without it the
+    // buy flow dead-ends at the first step and nobody ever sees the payment
+    // screen.
+    setTimeout(() => {
+      void (async () => {
+        const live = getState().orders.find((entry) => entry.id === order.id);
+        if (!live || live.status !== 'pending_seller') return;
+        live.status = 'awaiting_payment';
+        notify('order_update', 'Siparişin onaylandı', `${live.reference} — ödeyebilirsin.`, {
+          orderId: live.id,
+        });
+        await persist();
+      })();
+    }, 1200);
+
+    await persist();
+    return created({ id: order.id, reference: order.reference, total: order.totalAmount });
+  }
+
+  if (segments[0] === 'orders' && segments.length === 2 && method === 'GET') {
+    const order = state.orders.find((entry) => entry.id === at(1));
+    if (!order) return fail(404, 'NOT_FOUND', 'Sipariş bulunamadı.');
+    return ok({ ...order });
+  }
+
+  if (segments[0] === 'orders' && segments.length === 3 && method === 'POST') {
+    const order = state.orders.find((entry) => entry.id === at(1));
+    if (!order) return fail(404, 'NOT_FOUND', 'Sipariş bulunamadı.');
+
+    const action = at(2) ?? '';
+
+    if (action === 'pay') {
+      if (order.status !== 'awaiting_payment') {
+        return fail(409, 'CONFLICT', 'Bu sipariş şu anda ödenebilir durumda değil.');
+      }
+
+      order.status = 'paid';
+      order.paymentStatus = 'paid';
+      order.paidAt = now();
+
+      // Stock moves here, as it does in `pay_product_order`, so a demo buyer
+      // watching the last unit go sees the listing turn sold.
+      const owned = state.products.find((entry) => entry.id === order.productId);
+      if (owned) {
+        owned.quantity = Math.max(owned.quantity - order.quantity, 0);
+        if (owned.quantity === 0) owned.status = 'sold';
+      }
+
+      notify('order_paid', 'Ödeme alındı', `${order.reference} — satıcı kargoya verecek.`, {
+        orderId: order.id,
+      });
+
+      // And the seller ships, on the same reasoning as the auto-accept above.
+      setTimeout(() => {
+        void (async () => {
+          const live = getState().orders.find((entry) => entry.id === order.id);
+          if (!live || live.status !== 'paid') return;
+          live.status = 'shipped';
+          live.shippedAt = now();
+          live.trackingNote = 'Demo Kargo 1234567890';
+          notify('order_update', 'Siparişin yolda', `${live.reference} — satıcı gönderdi.`, {
+            orderId: live.id,
+          });
+          await persist();
+        })();
+      }, 2000);
+
+      await persist();
+      return ok({ status: 'paid', remaining: owned?.quantity ?? 0, provider: 'demo' });
+    }
+
+    const TRANSITIONS: Record<string, Record<string, { to: string; by: 'buyer' | 'seller' }>> = {
+      pending_seller: {
+        accept: { to: 'awaiting_payment', by: 'seller' },
+        reject: { to: 'cancelled', by: 'seller' },
+      },
+      paid: { ship: { to: 'shipped', by: 'seller' } },
+      shipped: { confirm: { to: 'completed', by: 'buyer' } },
+    };
+
+    if (action === 'cancel') {
+      if (['cancelled', 'refunded', 'completed'].includes(order.status)) {
+        return fail(409, 'CONFLICT', 'Bu sipariş artık iptal edilemez.');
+      }
+
+      const refunding = order.paymentStatus === 'paid';
+      if (refunding) {
+        const owned = state.products.find((entry) => entry.id === order.productId);
+        if (owned) {
+          owned.quantity += order.quantity;
+          if (owned.status === 'sold') owned.status = 'active';
+        }
+        order.paymentStatus = 'refunded';
+      }
+
+      order.status = refunding ? 'refunded' : 'cancelled';
+      order.cancelReason = (payload.reason as string) ?? null;
+      await persist();
+      return ok({ status: order.status });
+    }
+
+    const rule = TRANSITIONS[order.status]?.[action];
+    if (!rule) {
+      return fail(409, 'CONFLICT', `Bu sipariş "${order.status}" durumundayken bu işlem yapılamaz.`);
+    }
+
+    if (rule.by !== order.side) {
+      return fail(
+        403,
+        'FORBIDDEN',
+        rule.by === 'seller'
+          ? 'Bu işlemi yalnızca satıcı yapabilir.'
+          : 'Bu işlemi yalnızca alıcı yapabilir.',
+      );
+    }
+
+    order.status = rule.to;
+    if (rule.to === 'shipped') order.shippedAt = now();
+    if (rule.to === 'completed') order.completedAt = now();
+
+    await persist();
+    return ok({ status: rule.to });
   }
 
   if (segments[0] === 'products' && segments.length === 2 && method === 'GET') {

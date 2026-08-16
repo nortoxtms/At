@@ -255,6 +255,59 @@ await step('a product is listed and published', async () => {
   await expectScreen('Yayında');
 });
 
+await step('a product is bought end to end with no server', async () => {
+  // A named catalogue product, not "the first link on the page". Step 11 has
+  // just published one of the demo user's own, it sorts to the top, and buying
+  // your own product is a rule both the API and the demo refuse — so the
+  // generic version of this step tested the refusal by accident.
+  //
+  // It also has to be a `shipping` listing: a pickup order collects no
+  // address, and the address fields simply are not on screen for one.
+  await go('/urunler/longe-kayisi-ve-kamci-takimi-msuirr3c');
+  await page.waitForTimeout(2500);
+
+  await tap('Satın al');
+  await page.waitForTimeout(2000);
+  await expectScreen('Adet');
+
+  await byLabel('Adres').fill('Test Sokak 5');
+  await byLabel('Şehir').fill('Ankara');
+  await tap('Siparişi ver');
+  await page.waitForTimeout(2500);
+
+  // The demo seller accepts on a timer, the way autoReply answers a message.
+  await expectScreen('Sipariş oluşturuldu');
+  await expectScreen('simülasyon');
+
+  await tap('Ödemeyi tamamla');
+  await page.waitForTimeout(2500);
+  await expectScreen('Ödeme tamamlandı');
+
+  // §18: back to the marketplace, not to the product just bought.
+  //
+  // Asserting on a category rather than the screen title: the title is
+  // rendered with `textTransform: uppercase`, and innerText returns what the
+  // browser painted — "EKIPMAN", which does not contain "Ekipman".
+  await tap('Ekipmana dön');
+  await page.waitForTimeout(2500);
+  await expectScreen('Koşum ve saraciye');
+});
+
+await step('the order is in Siparişlerim, on both sides', async () => {
+  await go('/siparislerim');
+  await page.waitForTimeout(2000);
+  await expectScreen('OH-');
+  // The seller ships on a timer once paid, so by now it is on its way.
+  const body = await page.evaluate(() => document.body.innerText);
+  if (!/Kargoda|Ödendi|Tamamland/.test(body)) {
+    throw new Error(`order did not progress past payment: ${body.slice(0, 300)}`);
+  }
+
+  await tap('Sattıklarım');
+  await page.waitForTimeout(1500);
+  await expectScreen('sipariş almadın');
+});
+
 await step('a message gets a reply and lands in the inbox', async () => {
   await go('/ara');
   await page.getByRole('link').first().click();

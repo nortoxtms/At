@@ -216,6 +216,24 @@ export default function ProductScreen() {
         </Txt>
       </View>
 
+      {/*
+        Buying comes before writing, and only when there is a price to buy at.
+        A "fiyat sorunuz" listing keeps the message box and nothing else —
+        offering a checkout with no amount is offering a button that 400s.
+      */}
+      {data.priceAmount !== null && data.priceType !== 'on_request' ? (
+        <Card style={{ gap: theme.space.md }}>
+          <Txt variant="h3">Bu ürünü al</Txt>
+          <Txt variant="small" color={theme.color.textSecondary} display={false}>
+            Sipariş verdiğinde önce satıcı stoğu onaylar; ödeme ondan sonra alınır.
+          </Txt>
+          <Button
+            label={me ? 'Satın al' : 'Almak için giriş yap'}
+            onPress={() => router.push(me ? `/satin-al/${data.slug}` : '/auth')}
+          />
+        </Card>
+      ) : null}
+
       <Card style={{ gap: theme.space.md }}>
         <Txt variant="h3">Satıcıya yaz</Txt>
         <Field

@@ -34,6 +34,7 @@ const LAUNCH = existsSync(CANDIDATE) ? { executablePath: CANDIDATE } : {};
 
 const base = (process.argv[2] ?? 'http://localhost:4400').replace(/\/$/, '');
 const DB = process.env.DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/only_horses';
+const API = process.env.API ?? 'http://localhost:3001';
 
 /**
  * Approve identity verification for an account, in the database.
@@ -43,6 +44,23 @@ const DB = process.env.DB_URL ?? 'postgresql://postgres:postgres@127.0.0.1:5432/
  * acceptance scripts all grant it this way. Everything downstream of the gate
  * is exercised for real; only the gate itself is stubbed.
  */
+/**
+ * A catalogue product that can actually be checked out: priced, in stock, and
+ * shipped rather than collected.
+ *
+ * Read from the search endpoint rather than hardcoded, because the seed is
+ * regenerated and a fixed slug turns into a 404 nobody connects to the seed.
+ */
+async function findShippableProduct() {
+  const response = await fetch(`${API}/v1/products/search?limit=50`);
+  const body = await response.json().catch(() => ({}));
+
+  const hit = (body?.data ?? []).find(
+    (product) => product.priceAmount && product.delivery !== 'pickup' && product.quantity > 0,
+  );
+  return hit?.slug ?? null;
+}
+
 async function verifyIdentity(accountEmail) {
   const { default: pg } = await import('pg');
   const client = new pg.Client({ connectionString: DB });
@@ -436,6 +454,39 @@ if (registered) {
     await tap('Yayınla');
     await page.waitForTimeout(2500);
     await expectScreen('Yayında');
+  });
+
+  await step('a product is bought from another seller, end to end', async () => {
+    // Bought from the seeded catalogue, not from the product step 23 just
+    // published: the API refuses buying your own listing, and it must be a
+    // `shipping` one or there is no address to fill.
+    const target = await findShippableProduct();
+    if (!target) throw new Error('no shippable product with a price in the catalogue');
+
+    await go(`/urunler/${target}`);
+    await page.waitForTimeout(2000);
+    await tap('Satın al');
+    await page.waitForTimeout(2000);
+    await expectScreen('Adet');
+
+    await byLabel('Adres').fill('Test Sokak 5');
+    await byLabel('Şehir').fill('Ankara');
+    await tap('Siparişi ver');
+    await page.waitForTimeout(3000);
+    await expectScreen('Sipariş oluşturuldu');
+
+    // §5 puts the seller's confirmation before the money, so paying now is
+    // refused — and the screen has to say so rather than appear to succeed.
+    await tap('Ödemeyi tamamla');
+    await page.waitForTimeout(2500);
+    await expectScreen('ödenebilir durumda değil');
+  });
+
+  await step('the unpaid order is waiting in Siparişlerim', async () => {
+    await go('/siparislerim');
+    await page.waitForTimeout(2500);
+    await expectScreen('OH-');
+    await expectScreen('Satıcı onayı bekleniyor');
   });
 
   await step('my listings is empty and points at the stable', async () => {

@@ -195,3 +195,55 @@ export const SEXES = horseSex.options;
 export const LISTING_TYPE_OPTIONS = listingType.options;
 export const ROLE_IDS = roleType.options;
 export const HEALTH_TYPE_IDS = healthRecordType.options;
+
+/** GET /orders/mine — snake_cased, straight out of the query. */
+export interface OrderRow {
+  id: string;
+  reference: string;
+  status: string;
+  payment_status: string;
+  quantity: number;
+  title_snapshot: string;
+  unit_price_amount: string;
+  total_amount: string;
+  currency: string;
+  delivery: string;
+  tracking_note: string | null;
+  created_at: string;
+  paid_at: string | null;
+  shipped_at: string | null;
+  completed_at: string | null;
+  cancel_reason: string | null;
+  product_slug: string;
+  counterparty_name: string;
+  counterparty_handle: string;
+}
+
+/**
+ * §5-style transitions, as the buttons each side may press.
+ *
+ * Keyed by role because the two parties do not share a lifecycle: the seller
+ * confirms and ships, the buyer pays and receives. Rendering the seller's
+ * buttons to a buyer would offer four actions the API answers 403 to.
+ */
+export const ORDER_ACTIONS: Record<
+  'buyer' | 'seller',
+  Record<string, { action: string; label: string }[]>
+> = {
+  buyer: {
+    pending_seller: [{ action: 'cancel', label: 'Vazgeç' }],
+    awaiting_payment: [
+      { action: 'pay', label: 'Öde' },
+      { action: 'cancel', label: 'Vazgeç' },
+    ],
+    paid: [{ action: 'cancel', label: 'İptal et' }],
+    shipped: [{ action: 'confirm', label: 'Teslim aldım' }],
+  },
+  seller: {
+    pending_seller: [
+      { action: 'accept', label: 'Onayla' },
+      { action: 'reject', label: 'Reddet' },
+    ],
+    paid: [{ action: 'ship', label: 'Kargoya verdim' }],
+  },
+};

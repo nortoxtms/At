@@ -184,6 +184,7 @@ export default function ProfileScreen() {
             { label: 'Ahırım', icon: 'home-outline', href: '/ahir' },
             { label: 'İlanlarım', icon: 'list-outline', href: '/ilanlarim' },
             { label: 'Ürünlerim', icon: 'cube-outline', href: '/urunlerim' },
+            { label: 'Siparişlerim', icon: 'receipt-outline', href: '/siparislerim' },
             { label: 'Bildirimler', icon: 'notifications-outline', href: '/bildirimler' },
             { label: 'Kaydedilenler', icon: 'bookmark-outline', href: '/kaydedilenler' },
             { label: 'Aramalarım', icon: 'search-outline', href: '/aramalarim' },

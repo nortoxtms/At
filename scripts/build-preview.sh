@@ -122,6 +122,13 @@ restore() {
   rm -rf "$REPO_ROOT/apps/web/src"
   mv "$WORK/original-src" "$REPO_ROOT/apps/web/src"
   rm -rf "$WORK"
+  # Next writes generated route types to .next/types even when distDir points
+  # somewhere else, so this build leaves behind a type file for `ilan-ver` — a
+  # route that exists only while the scratch copy is swapped in. tsconfig
+  # includes .next/types, so the next `pnpm typecheck` then fails on a module
+  # that was never in the repository. Three separate red typechecks came from
+  # exactly this before anyone traced it here.
+  rm -rf "$REPO_ROOT/apps/web/.next/types"
 }
 trap restore EXIT
 

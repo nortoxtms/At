@@ -18,6 +18,7 @@ import { EntitlementsModule } from './modules/entitlements/entitlements.module.j
 import { HealthRecordsModule } from './modules/health-records/health-records.module.js';
 import { HorsesModule } from './modules/horses/horses.module.js';
 import { ListingsModule } from './modules/listings/listings.module.js';
+import { OrdersModule } from './modules/orders/orders.module.js';
 import { ProductsModule } from './modules/products/products.module.js';
 import { ServicesModule } from './modules/services/services.module.js';
 import { JobBoardModule } from './modules/jobs/jobs.module.js';
@@ -61,6 +62,7 @@ import { ReferenceModule } from './modules/reference/reference.module.js';
     SearchModule,
     ListingsModule,
     ProductsModule,
+    OrdersModule,
     ServicesModule,
     JobBoardModule,
     ReviewsModule,
